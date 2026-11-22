@@ -24,6 +24,13 @@ if (fs.existsSync(audioSrc)) {
     console.log(`✅ ${files.length} ses dosyası dist/audio içine kopyalandı.`);
 }
 
+// 2b. Playgama Bridge Config dosyasını kopyala
+const bridgeConfig = path.join(SRC_DIR, 'playgama-bridge-config.json');
+if (fs.existsSync(bridgeConfig)) {
+    fs.copyFileSync(bridgeConfig, path.join(DIST_DIR, 'playgama-bridge-config.json'));
+    console.log('✅ playgama-bridge-config.json kopyalandı.');
+}
+
 // 3. JS dosyalarını birleştir ve esbuild ile sıkıştır
 console.log('⚡ JavaScript dosyaları (avatar.js, audio.js, data.js, engine.js, main.js) sıkıştırılıyor...');
 const jsFiles = ['avatar.js', 'audio.js', 'data.js', 'engine.js', 'main.js'];

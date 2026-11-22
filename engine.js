@@ -185,6 +185,55 @@ class SniperEngine {
         this.ui.onEndlessContractLoaded(this.activeMission, this.endlessStreak, this.playerState.bestEndlessStreak);
     }
 
+    // Hedef Sabıka / İstihbarat Portresi Çizici (Target Dossier Mugshot Renderer)
+    renderTargetMugshot(targetCanvas) {
+        if (!targetCanvas || !this.activeMission || !this.activeMission.target) return;
+        const ctx = targetCanvas.getContext('2d');
+        if (!ctx) return;
+        ctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+
+        // Koyu taktiksel istihbarat arkaplanı
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+
+        // İnce ızgara & nişangah çizgileri (Tactical Reticle Grid)
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.18)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(3, 3, targetCanvas.width - 6, targetCanvas.height - 6);
+        ctx.beginPath();
+        ctx.moveTo(targetCanvas.width / 2, 4); ctx.lineTo(targetCanvas.width / 2, 10);
+        ctx.moveTo(4, targetCanvas.height / 2); ctx.lineTo(10, targetCanvas.height / 2);
+        ctx.stroke();
+
+        // Hedefin baş ve üst gövdesini merkeze hizalayarak çiz
+        ctx.save();
+        ctx.translate(targetCanvas.width / 2, targetCanvas.height * 0.92);
+        ctx.scale(1.18, 1.18);
+
+        const mugshotDummy = {
+            isAlive: true,
+            animFrame: 0,
+            clothes: this.activeMission.target.clothes
+        };
+
+        this.drawCharacter(ctx, mugshotDummy);
+        ctx.restore();
+
+        // Kırmızı gözetleme köşe parantezleri (Surveillance Corner Brackets)
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        // Sol-Üst
+        ctx.moveTo(3, 10); ctx.lineTo(3, 3); ctx.lineTo(10, 3);
+        // Sağ-Üst
+        ctx.moveTo(targetCanvas.width - 10, 3); ctx.lineTo(targetCanvas.width - 3, 3); ctx.lineTo(targetCanvas.width - 3, 10);
+        // Sol-Alt
+        ctx.moveTo(3, targetCanvas.height - 10); ctx.lineTo(3, targetCanvas.height - 3); ctx.lineTo(10, targetCanvas.height - 3);
+        // Sağ-Alt
+        ctx.moveTo(targetCanvas.width - 10, targetCanvas.height - 3); ctx.lineTo(targetCanvas.width - 3, targetCanvas.height - 3); ctx.lineTo(targetCanvas.width - 3, targetCanvas.height - 10);
+        ctx.stroke();
+    }
+
     // Dürbün Açma / Kapatma (Genel Bakış <-> Hassas Nişan)
     toggleScope(forceState) {
         if (this.state !== 'PLAYING') return;

@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
         hudClueBanner: document.getElementById('hud-clue-banner'),
         hudStreakPill: document.getElementById('hud-streak-pill'),
         hudClueText: document.getElementById('hud-clue-text'),
+        targetMugshotCanvas: document.getElementById('target-mugshot-canvas'),
+        hudTargetLabel: document.getElementById('hud-target-label'),
 
         // Briefing Elements
         briefingTitle: document.getElementById('briefing-title'),
@@ -77,6 +79,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hudAv) hudAv.innerHTML = window.SNIPER_HERO_AVATAR_SVG;
     }
 
+    // Playgama Bridge SDK Başlatma (Cross-Platform Ads & Analytics)
+    if (window.bridge && typeof window.bridge.initialize === 'function') {
+        window.bridge.initialize().then(() => {
+            console.log("Playgama Bridge SDK başarıyla başlatıldı!");
+        }).catch(err => {
+            console.log("Playgama Bridge bağımsız modda çalışıyor:", err);
+        });
+    }
+
     // UI Hooks
     const uiHooks = {
         showToast(msg, type = 'info') {
@@ -99,6 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
             els.missionNameHud.textContent = mission.title;
             if (els.hudStreakPill) els.hudStreakPill.style.display = 'none';
             if (els.hudClueText) els.hudClueText.textContent = `🎯 ${mission.clue}`;
+            if (els.targetMugshotCanvas) engine.renderTargetMugshot(els.targetMugshotCanvas);
+            if (els.hudTargetLabel && mission.target) els.hudTargetLabel.textContent = mission.target.label || 'Target';
             els.zoomVal.textContent = isScoped ? `${weapon.zoomLevels[weapon.currentZoomIdx || 0]}x` : '1x';
             if (els.scopeToggleText) {
                 els.scopeToggleText.textContent = isScoped ? '👁️ RECON' : '🎯 SCOPE IN';
@@ -112,6 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 els.hudStreakPill.textContent = `🔥 STREAK: ${streak}`;
             }
             if (els.hudClueText) els.hudClueText.textContent = contract.clue;
+            if (els.targetMugshotCanvas) engine.renderTargetMugshot(els.targetMugshotCanvas);
+            if (els.hudTargetLabel && contract.target) els.hudTargetLabel.textContent = contract.target.label || 'Target';
             els.zoomVal.textContent = '1x';
             if (els.scopeToggleText) els.scopeToggleText.textContent = '🎯 SCOPE IN';
         },
@@ -122,6 +137,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 els.hudStreakPill.textContent = `🔥 STREAK: ${streak}`;
             }
             if (els.hudClueText) els.hudClueText.textContent = contract.clue;
+            if (els.targetMugshotCanvas) engine.renderTargetMugshot(els.targetMugshotCanvas);
+            if (els.hudTargetLabel && contract.target) els.hudTargetLabel.textContent = contract.target.label || 'Target';
         },
         onEndlessComplete(data) {
             hideAllModals();

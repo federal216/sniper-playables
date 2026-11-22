@@ -1,0 +1,7 @@
+{
+  "advertisement": {
+    "interstitial": {
+      "preloadOnStart": true
+    }
+  }
+}
