@@ -718,14 +718,14 @@ class SniperEngine {
             // Zamanlayıcı
             this.missionTimeLeft -= effectiveDt;
             if (this.missionTimeLeft <= 0) {
-                this.handleMissionFail("Süre doldu! Hedef bölgeden uzaklaştı.");
+                this.handleMissionFail("Time expired! Target escaped the sector.");
             }
 
             // Düşman Sniper Tehdidi (Bölüm 19)
             if (this.activeMission && this.activeMission.enemySniper) {
                 this.enemySniperAimTime += effectiveDt;
                 if (this.enemySniperAimTime > 10.0) {
-                    this.handleMissionFail("Düşman keskin nişancı seni tespit edip vurdu!");
+                    this.handleMissionFail("Enemy sniper detected your position and eliminated you!");
                 }
             }
 
@@ -745,7 +745,7 @@ class SniperEngine {
                 // Sınır dışına çıkarsa ve panik halindeyse kaçmıştır
                 if (t.panic && (t.x < 50 || t.x > 950)) {
                     t.isAlive = false;
-                    this.handleMissionFail("Hedef gözden kayboldu ve kaçtı!");
+                    this.handleMissionFail("Target was spooked and escaped the perimeter!");
                 }
             });
         }
