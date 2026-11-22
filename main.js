@@ -79,14 +79,31 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hudAv) hudAv.innerHTML = window.SNIPER_HERO_AVATAR_SVG;
     }
 
-    // Playgama Bridge SDK Başlatma (Cross-Platform Ads & Analytics)
+    // Playgama Bridge SDK Başlatma & Game Ready Bildirimi (Mandatory for Playgama Sandbox & Moderation)
+    function notifyGameReady() {
+        if (window.bridge && window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
+            try {
+                window.bridge.platform.sendMessage("game_ready");
+                console.log("Playgama Bridge: game_ready signal sent successfully!");
+            } catch (e) {
+                console.warn("Playgama Bridge sendMessage error:", e);
+            }
+        }
+    }
+
     if (window.bridge && typeof window.bridge.initialize === 'function') {
         window.bridge.initialize().then(() => {
             console.log("Playgama Bridge SDK başarıyla başlatıldı!");
+            notifyGameReady();
         }).catch(err => {
             console.log("Playgama Bridge bağımsız modda çalışıyor:", err);
+            notifyGameReady();
         });
     }
+
+    window.addEventListener('load', () => {
+        setTimeout(notifyGameReady, 250);
+    });
 
     // UI Hooks
     const uiHooks = {
