@@ -37,7 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
         startBriefingBtn: document.getElementById('start-briefing-btn'),
         launchMissionBtn: document.getElementById('launch-mission-btn'),
         nextMissionBtn: document.getElementById('next-mission-btn'),
+        victoryReplayBtn: document.getElementById('victory-replay-btn'),
         retryMissionBtn: document.getElementById('retry-mission-btn'),
+        hudRetryBtn: document.getElementById('hud-retry-btn'),
         openArmoryBtn: document.getElementById('open-armory-btn'),
         closeArmoryBtn: document.getElementById('close-armory-btn'),
         openLevelsBtn: document.getElementById('open-levels-btn'),
@@ -146,6 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
     els.nextMissionBtn.addEventListener('click', () => {
         const nextIdx = engine.playerState.currentMissionIdx + 1;
         if (nextIdx < MISSIONS_DATA.length) {
+            engine.playerState.currentMissionIdx = nextIdx;
+            engine.saveData();
             showBriefing(nextIdx);
         } else {
             uiHooks.showToast("Congratulations! All 20 missions completed!", "info");
@@ -153,9 +157,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    if (els.victoryReplayBtn) {
+        els.victoryReplayBtn.addEventListener('click', () => {
+            engine.startMission(engine.playerState.currentMissionIdx);
+        });
+    }
+
     els.retryMissionBtn.addEventListener('click', () => {
         engine.startMission(engine.playerState.currentMissionIdx);
     });
+
+    if (els.hudRetryBtn) {
+        els.hudRetryBtn.addEventListener('click', () => {
+            engine.startMission(engine.playerState.currentMissionIdx);
+            uiHooks.showToast("Mission restarted 🔄", "info");
+        });
+    }
 
     // --- ARMORY & WEAPON MODIFICATIONS SYSTEM ---
     function renderArmory() {

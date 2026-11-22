@@ -1424,16 +1424,40 @@ class SniperEngine {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
         ctx.fillRect(-2.5, -39, 5, 1.5);
 
-        // 6. Kafa ve Çene Anatomisi
+        // 6. Gerçekçi Kafa, Elmacık Kemiği ve Çene Anatomisi (Sculpted Facial Contour)
         ctx.fillStyle = skinColor;
         ctx.beginPath();
-        ctx.ellipse(0, -45, 6.5, 7.5, 0, 0, Math.PI * 2);
+        // Üst kafatası oval kavis
+        ctx.arc(0, -46.5, 6.5, Math.PI, 0);
+        // Sağ elmacık kemiği ve çene hattı (jawline taper)
+        ctx.bezierCurveTo(6.5, -43, 5.5, -39, 2.5, -37.5);
+        // Çene tabanı (chin)
+        ctx.lineTo(-2.5, -37.5);
+        // Sol çene hattı ve elmacık kemiği
+        ctx.bezierCurveTo(-5.5, -39, -6.5, -43, -6.5, -46.5);
+        ctx.closePath();
         ctx.fill();
 
-        // Kulak ve Telsiz Kulaklığı
+        // Elmacık kemiği ve çene derinliği (3D Face Shading)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+        ctx.beginPath();
+        ctx.ellipse(-2, -43, 2.8, 3.2, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Göz çukuru derinliği (Eye Socket Shadow)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.beginPath();
+        ctx.ellipse(3.8, -46.2, 3.2, 2.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Kulak ve Kıkırdak Detayı (Ear Helix & Tragus)
         ctx.fillStyle = skinColor;
         ctx.beginPath();
-        ctx.arc(-5.8, -44, 2, 0, Math.PI * 2);
+        ctx.ellipse(-5.8, -44, 2.2, 3, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)'; // Kulak içi kıvrımı
+        ctx.beginPath();
+        ctx.ellipse(-5.6, -44, 1.2, 1.8, 0.1, 0, Math.PI * 2);
         ctx.fill();
         if (t.clothes && t.clothes.earpiece) {
             ctx.fillStyle = '#0284c7';
