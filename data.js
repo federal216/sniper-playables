@@ -320,7 +320,7 @@ const MISSIONS_DATA = [
             label: 'Mob Boss'
         },
         civilians: [
-            { x: 570, y: 190, speed: 0, clothes: { skinTone: '#fde68a', hairColor: '#d4af37', hairStyle: 'curly', eyeColor: '#0284c7', facialHair: 'clean', hat: 'none', jacket: '#ffffff', pants: '#4a5568', accessory: 'cocktail' } },
+            { x: 570, y: 190, speed: 0, clothes: { isFemale: true, skinTone: '#fde68a', hairColor: '#fde047', hairStyle: 'wavy_long', eyeColor: '#0284c7', facialHair: 'clean', hat: 'none', jacket: '#dc2626', jacketStyle: 'evening_gown', shoeColor: '#dc2626', accessory: 'champagne' } },
             { x: 700, y: 190, speed: 0, clothes: { skinTone: '#f6ad55', hairColor: '#59341c', hairStyle: 'pompadour', eyeColor: '#16a34a', facialHair: 'stubble', hat: 'none', jacket: '#d69e2e', pants: '#1a202c', accessory: 'cocktail' } }
         ]
     },
@@ -494,7 +494,7 @@ const MISSIONS_DATA = [
             label: 'Financier'
         },
         civilians: [
-            { x: 520, y: 308, speed: 0, type: 'balcony', clothes: { skinTone: '#fde68a', hairColor: '#d4af37', hairStyle: 'curly', eyeColor: '#15803d', facialHair: 'clean', hat: 'none', jacket: '#e2e8f0', jacketStyle: 'shirt', pants: '#4a5568', accessory: 'cocktail' } }
+            { x: 520, y: 308, speed: 0, type: 'balcony', clothes: { isFemale: true, skinTone: '#fde68a', hairColor: '#1c1917', hairStyle: 'bob_cut', eyeColor: '#15803d', facialHair: 'clean', hat: 'none', jacket: '#059669', jacketStyle: 'cocktail_dress', shoeColor: '#09090b', accessory: 'clutch' } }
         ]
     },
     {
@@ -565,7 +565,7 @@ const MISSIONS_DATA = [
             label: 'Nightclub Boss'
         },
         civilians: [
-            { x: 420, y: 300, speed: 0.2, clothes: { skinTone: '#f6ad55', hairColor: '#1c1917', eyeColor: '#16a34a', facialHair: 'clean', hat: 'none', jacket: '#d53f8c', pants: '#2b6cb0' } },
+            { x: 420, y: 300, speed: 0.2, clothes: { isFemale: true, skinTone: '#fde68a', hairColor: '#d4af37', hairStyle: 'high_bun', eyeColor: '#16a34a', facialHair: 'clean', hat: 'none', jacket: '#09090b', jacketStyle: 'cocktail_dress', shoeColor: '#09090b', accessory: 'cigarette_holder' } },
             { x: 660, y: 300, speed: -0.3, clothes: { skinTone: '#78350f', hairColor: '#09090b', eyeColor: '#5c3a21', facialHair: 'full_beard', hat: 'none', jacket: '#319795', pants: '#1a202c' } }
         ]
     },

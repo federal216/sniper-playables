@@ -1313,110 +1313,194 @@ class SniperEngine {
         const jacketStyle = (t.clothes && t.clothes.jacketStyle) || 'suit';
         const shirtColor = (t.clothes && t.clothes.shirt) || '#f8fafc';
 
-        // 2. Bacaklar ve Ayakkabılar (Kalın, kumaş hatlı insan bacağı)
-        // Sol Bacak
-        ctx.fillStyle = pantsColor;
-        ctx.beginPath();
-        ctx.moveTo(-4, -10);
-        ctx.lineTo(-7 + walkOffset, 10);
-        ctx.lineTo(-2 + walkOffset, 10);
-        ctx.lineTo(-1, -10);
-        ctx.fill();
-        // Sol Ayakkabı
-        ctx.fillStyle = shoeColor;
-        ctx.fillRect(-8 + walkOffset, 10, 8, 4);
+        const isFemme = t.clothes && (t.clothes.isFemale || jacketStyle === 'evening_gown' || jacketStyle === 'cocktail_dress');
 
-        // Sağ Bacak
-        ctx.fillStyle = pantsColor;
-        ctx.beginPath();
-        ctx.moveTo(1, -10);
-        ctx.lineTo(2 - walkOffset, 10);
-        ctx.lineTo(7 - walkOffset, 10);
-        ctx.lineTo(4, -10);
-        ctx.fill();
-        // Sağ Ayakkabı
-        ctx.fillStyle = shoeColor;
-        ctx.fillRect(2 - walkOffset, 10, 8, 4);
-
-        // 3. Arka Kol (Yürüyüş salınımı)
-        ctx.fillStyle = jacketColor;
-        ctx.beginPath();
-        ctx.ellipse(-9, -24 + walkOffset * 0.4, 4, 10, -walkOffset * 0.05, 0, Math.PI * 2);
-        ctx.fill();
-        // Arka El
-        ctx.fillStyle = skinColor;
-        ctx.beginPath();
-        ctx.arc(-9, -13 + walkOffset * 0.4, 3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 4. İnsan Gövdesi (Ceket, Yelek, Trençkot, Kapüşonlu)
-        ctx.fillStyle = jacketColor;
-        ctx.beginPath();
-        ctx.moveTo(-9, -36); // Sol omuz
-        ctx.lineTo(9, -36);  // Sağ omuz
-        ctx.lineTo(7, -8);   // Sağ bel
-        ctx.lineTo(-7, -8);  // Sol bel
-        ctx.closePath();
-        ctx.fill();
-
-        // Gömlek V-kesimi
-        ctx.fillStyle = shirtColor;
-        ctx.beginPath();
-        ctx.moveTo(-3, -36);
-        ctx.lineTo(3, -36);
-        ctx.lineTo(0, -26);
-        ctx.closePath();
-        ctx.fill();
-
-        // Ceket Stili Detayları
-        if (jacketStyle === 'tuxedo') {
-            ctx.fillStyle = '#0f172a';
+        if (isFemme) {
+            // 2. Femme Fatale Bacaklar & İnce Topuklu Ayakkabılar (Stilettos)
+            const legColor = t.clothes.stockings ? '#1e293b' : skinColor;
+            ctx.fillStyle = legColor;
+            // Sol Bacak
             ctx.beginPath();
-            ctx.moveTo(-9, -36); ctx.lineTo(-3, -36); ctx.lineTo(-1, -24); ctx.lineTo(-7, -24); ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(9, -36); ctx.lineTo(3, -36); ctx.lineTo(1, -24); ctx.lineTo(7, -24); ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(4, -28, 3, 1.5); // Cep mendili
-        } else if (jacketStyle === 'trench') {
-            ctx.fillStyle = '#78350f';
-            ctx.fillRect(-8, -36, 4, 1.5);
-            ctx.fillRect(4, -36, 4, 1.5);
-            ctx.fillStyle = '#f59e0b';
-            ctx.fillRect(-3, -24, 1.5, 1.5); ctx.fillRect(1.5, -24, 1.5, 1.5);
-            ctx.fillRect(-3, -18, 1.5, 1.5); ctx.fillRect(1.5, -18, 1.5, 1.5);
-        } else if (jacketStyle === 'hoodie') {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.beginPath();
-            ctx.arc(0, -36, 6, 0, Math.PI);
+            ctx.moveTo(-3, -10);
+            ctx.lineTo(-4 + walkOffset * 0.6, 8);
+            ctx.lineTo(-1 + walkOffset * 0.6, 8);
+            ctx.lineTo(-0.5, -10);
             ctx.fill();
-            ctx.strokeStyle = '#f8fafc';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(-2, -34); ctx.lineTo(-2, -26);
-            ctx.moveTo(2, -34); ctx.lineTo(2, -26);
-            ctx.stroke();
-        }
+            // Sol Stiletto Topuklu
+            ctx.fillStyle = shoeColor;
+            ctx.fillRect(-5 + walkOffset * 0.6, 8, 6, 2.5); // taban
+            ctx.fillRect(-5 + walkOffset * 0.6, 8, 1.2, 4.5); // sivri topuk pimi
 
-        // Kravat
-        if (t.clothes && t.clothes.tie) {
-            ctx.fillStyle = t.clothes.tie;
+            // Sağ Bacak
+            ctx.fillStyle = legColor;
             ctx.beginPath();
-            ctx.moveTo(-1.5, -35);
-            ctx.lineTo(1.5, -35);
-            ctx.lineTo(2, -18);
-            ctx.lineTo(0, -15);
-            ctx.lineTo(-2, -18);
+            ctx.moveTo(1, -10);
+            ctx.lineTo(1 - walkOffset * 0.6, 8);
+            ctx.lineTo(4 - walkOffset * 0.6, 8);
+            ctx.lineTo(3.5, -10);
+            ctx.fill();
+            // Sağ Stiletto Topuklu
+            ctx.fillStyle = shoeColor;
+            ctx.fillRect(1 - walkOffset * 0.6, 8, 6, 2.5);
+            ctx.fillRect(1 - walkOffset * 0.6, 8, 1.2, 4.5);
+
+            // 3. Arka Kol (Zarif kadın kolu)
+            ctx.fillStyle = skinColor;
+            ctx.beginPath();
+            ctx.ellipse(-7, -24 + walkOffset * 0.3, 2.5, 9, -walkOffset * 0.05, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 4. Gece Elbisesi / Kokteyl Elbisesi Gövdesi (Sırt/Göğüs Dekoltesi & Kum Saati Bel)
+            ctx.fillStyle = jacketColor; // Asil Kırmızı, Gece Siyahı veya Zümrüt Yeşili
+            ctx.beginPath();
+            ctx.moveTo(-6.5, -34); // Sol omuz
+            ctx.lineTo(6.5, -34);  // Sağ omuz
+            ctx.bezierCurveTo(7, -26, 4.5, -18, 4, -12); // İnce kum saati bel
+            if (jacketStyle === 'evening_gown') {
+                ctx.lineTo(8.5, 5); // Yere kadar dökümlü abiye etek
+                ctx.lineTo(-8.5, 5);
+            } else {
+                ctx.lineTo(6.5, -4); // Kokteyl dizüstü etek
+                ctx.lineTo(-6.5, -4);
+            }
+            ctx.bezierCurveTo(-4.5, -18, -7, -26, -6.5, -34);
             ctx.closePath();
             ctx.fill();
-        }
 
-        // Ceket Düğmeleri / Fermuar çizgisi
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, -25);
-        ctx.lineTo(0, -8);
-        ctx.stroke();
+            // Derin yırtmaç detayı
+            if (jacketStyle === 'evening_gown') {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(2, -10); ctx.lineTo(4.5, 5);
+                ctx.stroke();
+            }
+
+            // Zarif Dekolte Kesimi (Sweetheart Neckline)
+            ctx.fillStyle = skinColor;
+            ctx.beginPath();
+            ctx.moveTo(-3.5, -34);
+            ctx.lineTo(3.5, -34);
+            ctx.lineTo(0, -27);
+            ctx.closePath();
+            ctx.fill();
+
+            // Altın / Pırlanta Gerdanlık Kolye (Gold Necklace & Diamond Sparkle)
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(0, -32, 2.6, 0, Math.PI);
+            ctx.stroke();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, -29.2, 0.9, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // 2. Bacaklar ve Ayakkabılar (Kalın, kumaş hatlı insan bacağı)
+            // Sol Bacak
+            ctx.fillStyle = pantsColor;
+            ctx.beginPath();
+            ctx.moveTo(-4, -10);
+            ctx.lineTo(-7 + walkOffset, 10);
+            ctx.lineTo(-2 + walkOffset, 10);
+            ctx.lineTo(-1, -10);
+            ctx.fill();
+            // Sol Ayakkabı
+            ctx.fillStyle = shoeColor;
+            ctx.fillRect(-8 + walkOffset, 10, 8, 4);
+
+            // Sağ Bacak
+            ctx.fillStyle = pantsColor;
+            ctx.beginPath();
+            ctx.moveTo(1, -10);
+            ctx.lineTo(2 - walkOffset, 10);
+            ctx.lineTo(7 - walkOffset, 10);
+            ctx.lineTo(4, -10);
+            ctx.fill();
+            // Sağ Ayakkabı
+            ctx.fillStyle = shoeColor;
+            ctx.fillRect(2 - walkOffset, 10, 8, 4);
+
+            // 3. Arka Kol (Yürüyüş salınımı)
+            ctx.fillStyle = jacketColor;
+            ctx.beginPath();
+            ctx.ellipse(-9, -24 + walkOffset * 0.4, 4, 10, -walkOffset * 0.05, 0, Math.PI * 2);
+            ctx.fill();
+            // Arka El
+            ctx.fillStyle = skinColor;
+            ctx.beginPath();
+            ctx.arc(-9, -13 + walkOffset * 0.4, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 4. İnsan Gövdesi (Ceket, Yelek, Trençkot, Kapüşonlu)
+            ctx.fillStyle = jacketColor;
+            ctx.beginPath();
+            ctx.moveTo(-9, -36); // Sol omuz
+            ctx.lineTo(9, -36);  // Sağ omuz
+            ctx.lineTo(7, -8);   // Sağ bel
+            ctx.lineTo(-7, -8);  // Sol bel
+            ctx.closePath();
+            ctx.fill();
+
+            // Gömlek V-kesimi
+            ctx.fillStyle = shirtColor;
+            ctx.beginPath();
+            ctx.moveTo(-3, -36);
+            ctx.lineTo(3, -36);
+            ctx.lineTo(0, -26);
+            ctx.closePath();
+            ctx.fill();
+
+            // Ceket Stili Detayları
+            if (jacketStyle === 'tuxedo') {
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.moveTo(-9, -36); ctx.lineTo(-3, -36); ctx.lineTo(-1, -24); ctx.lineTo(-7, -24); ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(9, -36); ctx.lineTo(3, -36); ctx.lineTo(1, -24); ctx.lineTo(7, -24); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(4, -28, 3, 1.5); // Cep mendili
+            } else if (jacketStyle === 'trench') {
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(-8, -36, 4, 1.5);
+                ctx.fillRect(4, -36, 4, 1.5);
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(-3, -24, 1.5, 1.5); ctx.fillRect(1.5, -24, 1.5, 1.5);
+                ctx.fillRect(-3, -18, 1.5, 1.5); ctx.fillRect(1.5, -18, 1.5, 1.5);
+            } else if (jacketStyle === 'hoodie') {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.beginPath();
+                ctx.arc(0, -36, 6, 0, Math.PI);
+                ctx.fill();
+                ctx.strokeStyle = '#f8fafc';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(-2, -34); ctx.lineTo(-2, -26);
+                ctx.moveTo(2, -34); ctx.lineTo(2, -26);
+                ctx.stroke();
+            }
+
+            // Kravat
+            if (t.clothes && t.clothes.tie) {
+                ctx.fillStyle = t.clothes.tie;
+                ctx.beginPath();
+                ctx.moveTo(-1.5, -35);
+                ctx.lineTo(1.5, -35);
+                ctx.lineTo(2, -18);
+                ctx.lineTo(0, -15);
+                ctx.lineTo(-2, -18);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Ceket Düğmeleri / Fermuar çizgisi
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, -25);
+            ctx.lineTo(0, -8);
+            ctx.stroke();
+        }
 
         // 5. Boyun & Çene Altı Gölgesi
         ctx.fillStyle = skinColor;
@@ -1532,14 +1616,31 @@ class SniperEngine {
         ctx.stroke();
 
         // 10. DUDAK VE AĞIZ (Mouth & Lips)
-        ctx.strokeStyle = 'rgba(153, 27, 27, 0.45)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(2.5, -40.2);
-        ctx.lineTo(5.5, -40.2);
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.fillRect(3, -39.4, 2.5, 0.8);
+        if (isFemme) {
+            // Cazibeli Kırmızı/Vişne Ruj (Ruby Lipstick)
+            ctx.fillStyle = '#e11d48';
+            ctx.beginPath();
+            ctx.ellipse(3.8, -40, 2.2, 1.1, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Dudak parıltısı (Lip gloss specular highlight)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.fillRect(3.8, -40.5, 0.9, 0.5);
+            // Kuyruklu Eyeliner (Winged Eyeliner / Mascara flick)
+            ctx.strokeStyle = '#09090b';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(5.5, -45.5); ctx.lineTo(7.2, -46.7);
+            ctx.stroke();
+        } else {
+            ctx.strokeStyle = 'rgba(153, 27, 27, 0.45)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(2.5, -40.2);
+            ctx.lineTo(5.5, -40.2);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(3, -39.4, 2.5, 0.8);
+        }
 
         // 11. SAKAL, BIYIK VE KİRLİ SAKAL (Facial Hair)
         if (facialHair === 'stubble') {
@@ -1598,6 +1699,45 @@ class SniperEngine {
                     ctx.fill();
                 }
                 ctx.fillRect(3, -48, 2.5, 4);
+            } else if (hairStyle === 'wavy_long') {
+                // Dalgalı uzun asil saçlar (omuzlardan dökülen bukleler)
+                ctx.beginPath();
+                ctx.arc(0, -48, 7.5, Math.PI, 0);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(-6, -46);
+                ctx.bezierCurveTo(-9, -38, -10, -28, -7, -18);
+                ctx.lineTo(-4, -18);
+                ctx.bezierCurveTo(-7, -28, -6, -38, -4, -46);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(4, -46);
+                ctx.bezierCurveTo(7, -38, 8, -28, 6, -16);
+                ctx.lineTo(3, -16);
+                ctx.bezierCurveTo(5, -28, 4, -38, 2, -46);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                ctx.fillRect(-2, -50, 4, 1.5);
+            } else if (hairStyle === 'high_bun') {
+                // Gala / Opera topuzu ve altın toka
+                ctx.beginPath();
+                ctx.arc(0, -48, 7.2, Math.PI, 0);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(0, -56, 3.8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(-4, -56); ctx.lineTo(4, -56);
+                ctx.stroke();
+            } else if (hairStyle === 'bob_cut') {
+                // Şık küt saç
+                ctx.beginPath();
+                ctx.arc(0, -48, 7.6, Math.PI, 0);
+                ctx.fill();
+                ctx.fillRect(-7.5, -48, 3.5, 9);
+                ctx.fillRect(4, -48, 3.5, 9);
             } else if (hairStyle === 'pompadour') {
                 ctx.beginPath();
                 ctx.arc(1, -50, 6, Math.PI * 0.9, 0.2);
@@ -1652,17 +1792,61 @@ class SniperEngine {
         }
 
         // 8. Ön Kol & Taşınan Eşyalar
-        ctx.fillStyle = t.clothes.jacket || '#2d3748';
-        ctx.beginPath();
-        ctx.ellipse(7, -24 - walkOffset * 0.4, 4, 10, walkOffset * 0.05, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = skinColor;
-        ctx.beginPath();
-        ctx.arc(7, -13 - walkOffset * 0.4, 3, 0, Math.PI * 2);
-        ctx.fill();
+        if (isFemme) {
+            ctx.fillStyle = skinColor;
+            ctx.beginPath();
+            ctx.ellipse(6, -24 - walkOffset * 0.3, 2.5, 9, walkOffset * 0.05, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(6, -14 - walkOffset * 0.3, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = t.clothes.jacket || '#2d3748';
+            ctx.beginPath();
+            ctx.ellipse(7, -24 - walkOffset * 0.4, 4, 10, walkOffset * 0.05, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = skinColor;
+            ctx.beginPath();
+            ctx.arc(7, -13 - walkOffset * 0.4, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
-        // Aksesuarlar (Çanta, Şemsiye, Telefon, Kadeh)
-        if (t.clothes.accessory === 'briefcase') {
+        // Aksesuarlar (Çanta, Şemsiye, Telefon, Kadeh, Şampanya)
+        if (t.clothes.accessory === 'champagne') {
+            // Kristal şampanya flütü ve altın rengi köpüren baloncuklar
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(7, -26); ctx.lineTo(9.5, -26); ctx.lineTo(9, -19); ctx.lineTo(7.5, -19); ctx.closePath();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(8.5, -19); ctx.lineTo(8.5, -13);
+            ctx.moveTo(6.5, -13); ctx.lineTo(10.5, -13);
+            ctx.stroke();
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(7.5, -24, 1.6, 4);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(8, -27, 0.8, 0.8);
+        } else if (t.clothes.accessory === 'clutch') {
+            // Lüks altın tokalı gece çantası (Designer Clutch)
+            ctx.fillStyle = t.clothes.clutchColor || '#09090b';
+            ctx.fillRect(5, -19 - walkOffset * 0.3, 8, 5);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(8, -18 - walkOffset * 0.3, 2, 1.5);
+        } else if (t.clothes.accessory === 'cigarette_holder') {
+            // Audrey Hepburn / Noir tarzı zarif uzun ağızlık
+            ctx.fillStyle = '#09090b';
+            ctx.fillRect(4, -41, 10, 1.2);
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(14, -41, 1.5, 1.2);
+            if (!this.isThermal) {
+                const smokeTime = performance.now() * 0.003;
+                ctx.fillStyle = 'rgba(226, 232, 240, 0.35)';
+                ctx.beginPath();
+                ctx.arc(17 + Math.sin(smokeTime * 1.5) * 2, -44 - (smokeTime % 1) * 7, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (t.clothes.accessory === 'briefcase') {
             ctx.fillStyle = '#451a03'; // Deri evrak çantası
             ctx.fillRect(5, -14 - walkOffset * 0.4, 12, 10);
             ctx.fillStyle = '#fbbf24'; // Altın kilit
