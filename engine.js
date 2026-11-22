@@ -1302,9 +1302,16 @@ class SniperEngine {
 
         const legCycle = Math.sin(t.animFrame);
         const walkOffset = legCycle * 7;
-        const pantsColor = t.clothes.pants || '#1a202c';
-        const shoeColor = '#0f172a';
-        const skinColor = '#f6ad55';
+        const pantsColor = (t.clothes && t.clothes.pants) || '#1a202c';
+        const shoeColor = (t.clothes && t.clothes.shoeColor) || '#0f172a';
+        const skinColor = (t.clothes && t.clothes.skinTone) || '#f6ad55';
+        const hairColor = (t.clothes && t.clothes.hairColor) || '#1c1917';
+        const eyeColor = (t.clothes && t.clothes.eyeColor) || '#1e3a8a';
+        const hairStyle = (t.clothes && t.clothes.hairStyle) || 'slick_back';
+        const facialHair = (t.clothes && t.clothes.facialHair) || 'clean';
+        const jacketColor = (t.clothes && t.clothes.jacket) || '#2d3748';
+        const jacketStyle = (t.clothes && t.clothes.jacketStyle) || 'suit';
+        const shirtColor = (t.clothes && t.clothes.shirt) || '#f8fafc';
 
         // 2. Bacaklar ve Ayakkabılar (Kalın, kumaş hatlı insan bacağı)
         // Sol Bacak
@@ -1332,7 +1339,7 @@ class SniperEngine {
         ctx.fillRect(2 - walkOffset, 10, 8, 4);
 
         // 3. Arka Kol (Yürüyüş salınımı)
-        ctx.fillStyle = t.clothes.jacket || '#2d3748';
+        ctx.fillStyle = jacketColor;
         ctx.beginPath();
         ctx.ellipse(-9, -24 + walkOffset * 0.4, 4, 10, -walkOffset * 0.05, 0, Math.PI * 2);
         ctx.fill();
@@ -1342,8 +1349,8 @@ class SniperEngine {
         ctx.arc(-9, -13 + walkOffset * 0.4, 3, 0, Math.PI * 2);
         ctx.fill();
 
-        // 4. İnsan Gövdesi (Geniş omuzlar, bele doğru daralan takım elbise/mont)
-        ctx.fillStyle = t.clothes.jacket || '#2d3748';
+        // 4. İnsan Gövdesi (Ceket, Yelek, Trençkot, Kapüşonlu)
+        ctx.fillStyle = jacketColor;
         ctx.beginPath();
         ctx.moveTo(-9, -36); // Sol omuz
         ctx.lineTo(9, -36);  // Sağ omuz
@@ -1352,8 +1359,8 @@ class SniperEngine {
         ctx.closePath();
         ctx.fill();
 
-        // Ceket Yakası & Gömlek V-kesimi
-        ctx.fillStyle = '#f8fafc'; // Beyaz gömlek
+        // Gömlek V-kesimi
+        ctx.fillStyle = shirtColor;
         ctx.beginPath();
         ctx.moveTo(-3, -36);
         ctx.lineTo(3, -36);
@@ -1361,8 +1368,37 @@ class SniperEngine {
         ctx.closePath();
         ctx.fill();
 
+        // Ceket Stili Detayları
+        if (jacketStyle === 'tuxedo') {
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.moveTo(-9, -36); ctx.lineTo(-3, -36); ctx.lineTo(-1, -24); ctx.lineTo(-7, -24); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(9, -36); ctx.lineTo(3, -36); ctx.lineTo(1, -24); ctx.lineTo(7, -24); ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(4, -28, 3, 1.5); // Cep mendili
+        } else if (jacketStyle === 'trench') {
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(-8, -36, 4, 1.5);
+            ctx.fillRect(4, -36, 4, 1.5);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(-3, -24, 1.5, 1.5); ctx.fillRect(1.5, -24, 1.5, 1.5);
+            ctx.fillRect(-3, -18, 1.5, 1.5); ctx.fillRect(1.5, -18, 1.5, 1.5);
+        } else if (jacketStyle === 'hoodie') {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.arc(0, -36, 6, 0, Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = '#f8fafc';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-2, -34); ctx.lineTo(-2, -26);
+            ctx.moveTo(2, -34); ctx.lineTo(2, -26);
+            ctx.stroke();
+        }
+
         // Kravat
-        if (t.clothes.tie) {
+        if (t.clothes && t.clothes.tie) {
             ctx.fillStyle = t.clothes.tie;
             ctx.beginPath();
             ctx.moveTo(-1.5, -35);
@@ -1382,35 +1418,173 @@ class SniperEngine {
         ctx.lineTo(0, -8);
         ctx.stroke();
 
-        // 5. Boyun
+        // 5. Boyun & Çene Altı Gölgesi
         ctx.fillStyle = skinColor;
         ctx.fillRect(-2.5, -39, 5, 4);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+        ctx.fillRect(-2.5, -39, 5, 1.5);
 
-        // 6. Kafa ve Çene
+        // 6. Kafa ve Çene Anatomisi
+        ctx.fillStyle = skinColor;
         ctx.beginPath();
         ctx.ellipse(0, -45, 6.5, 7.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Saç / Saç Stili (Şapka yoksa)
-        if (!t.clothes.hat || t.clothes.hat === 'none' || t.clothes.hat === 'sunglasses') {
-            ctx.fillStyle = '#1c1917'; // Koyu kahve/siyah saç
-            ctx.beginPath();
-            ctx.arc(0, -48, 7, Math.PI, 0);
-            ctx.fill();
-            // Yan favori
-            ctx.fillRect(4, -48, 2.5, 5);
+        // Kulak ve Telsiz Kulaklığı
+        ctx.fillStyle = skinColor;
+        ctx.beginPath();
+        ctx.arc(-5.8, -44, 2, 0, Math.PI * 2);
+        ctx.fill();
+        if (t.clothes && t.clothes.earpiece) {
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(-6.5, -44, 1.5, 2.5);
         }
 
-        // Güneş Gözlüğü
-        if (t.clothes.hat === 'sunglasses' || t.clothes.accessories === 'glasses') {
+        // 7. KAŞLAR (Eyebrows)
+        ctx.strokeStyle = hairColor;
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(-1, -48); ctx.lineTo(1.8, -48.8);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(2.5, -48.8); ctx.lineTo(6.5, -48);
+        ctx.stroke();
+
+        // 8. GÖZLER (Sclera + Renkli İris + Siyah Gözbebeği + Canlı Işık Parıltısı)
+        if (t.clothes && (t.clothes.hat === 'sunglasses' || t.clothes.accessory === 'sunglasses' || t.clothes.glasses === 'sunglasses')) {
             ctx.fillStyle = '#0f172a';
-            ctx.fillRect(-1, -47, 8, 3.5);
-            ctx.fillStyle = '#38bdf8';
-            ctx.fillRect(1, -46.5, 2, 1); // Cam parlaması
+            ctx.fillRect(0, -47.5, 7.5, 4);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 0.8;
+            ctx.strokeRect(0, -47.5, 7.5, 4);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.fillRect(1.5, -47, 2, 1);
+        } else if (t.clothes && (t.clothes.hat === 'glasses' || t.clothes.glasses === 'optical')) {
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(1, -47.5, 6, 4);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.ellipse(4, -45.5, 2.2, 1.3, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = eyeColor;
+            ctx.beginPath(); ctx.arc(4.3, -45.5, 1.1, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.beginPath(); ctx.arc(4.4, -45.5, 0.6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(3.8, -46.2, 0.8, 0.8);
         } else {
-            // Normal göz profili
-            ctx.fillStyle = '#1e293b';
-            ctx.fillRect(2, -46, 2, 1.5);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(4, -45.5, 2.2, 1.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = eyeColor;
+            ctx.beginPath();
+            ctx.arc(4.3, -45.5, 1.1, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(4.4, -45.5, 0.6, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(3.9, -46.2, 0.8, 0.8);
+
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(2, -46.7);
+            ctx.lineTo(6, -46.4);
+            ctx.stroke();
+        }
+
+        // 9. BURUN (Nose Bridge & Tip)
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(3.5, -45.5);
+        ctx.lineTo(6.6, -42.8);
+        ctx.lineTo(4.6, -42.2);
+        ctx.stroke();
+
+        // 10. DUDAK VE AĞIZ (Mouth & Lips)
+        ctx.strokeStyle = 'rgba(153, 27, 27, 0.45)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(2.5, -40.2);
+        ctx.lineTo(5.5, -40.2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.fillRect(3, -39.4, 2.5, 0.8);
+
+        // 11. SAKAL, BIYIK VE KİRLİ SAKAL (Facial Hair)
+        if (facialHair === 'stubble') {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+            for (let sx = 0; sx <= 5; sx += 1.5) {
+                for (let sy = -41; sy <= -38; sy += 1.2) {
+                    ctx.fillRect(sx, sy, 0.8, 0.8);
+                }
+            }
+        } else if (facialHair === 'goatee') {
+            ctx.fillStyle = hairColor;
+            ctx.fillRect(2.5, -41.8, 3.5, 1.2);
+            ctx.fillRect(3, -39.5, 2.8, 2.5);
+        } else if (facialHair === 'full_beard') {
+            ctx.fillStyle = hairColor;
+            ctx.beginPath();
+            ctx.moveTo(0, -43);
+            ctx.lineTo(6, -42);
+            ctx.lineTo(5.5, -37.5);
+            ctx.lineTo(-2, -37.5);
+            ctx.closePath();
+            ctx.fill();
+        } else if (facialHair === 'mustache') {
+            ctx.fillStyle = hairColor;
+            ctx.fillRect(2, -41.8, 4.5, 1.5);
+        }
+
+        // 12. SAÇ MODELLERİ (Hair Styles)
+        if (!t.clothes || !t.clothes.hat || t.clothes.hat === 'none' || t.clothes.hat === 'sunglasses' || t.clothes.hat === 'glasses') {
+            ctx.fillStyle = hairColor;
+            if (hairStyle === 'slick_back') {
+                ctx.beginPath();
+                ctx.arc(0, -48, 7.2, Math.PI * 0.9, 0.1);
+                ctx.fill();
+                ctx.fillRect(3, -48, 2.5, 5);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fillRect(-2, -50, 5, 1.5);
+            } else if (hairStyle === 'side_part') {
+                ctx.beginPath();
+                ctx.arc(-1, -48, 7.5, Math.PI, 0);
+                ctx.fill();
+                ctx.fillRect(4, -48, 2.5, 4);
+            } else if (hairStyle === 'buzz_cut') {
+                ctx.beginPath();
+                ctx.arc(0, -47.5, 6.8, Math.PI, 0);
+                ctx.fill();
+            } else if (hairStyle === 'bald') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                ctx.beginPath();
+                ctx.arc(1, -49, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (hairStyle === 'curly') {
+                for (let ca = 0; ca < 5; ca++) {
+                    ctx.beginPath();
+                    ctx.arc(-4 + ca * 2.5, -50 + (ca % 2), 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.fillRect(3, -48, 2.5, 4);
+            } else if (hairStyle === 'pompadour') {
+                ctx.beginPath();
+                ctx.arc(1, -50, 6, Math.PI * 0.9, 0.2);
+                ctx.fill();
+                ctx.fillRect(4, -48, 2.5, 5);
+            } else {
+                ctx.beginPath();
+                ctx.arc(0, -48, 7, Math.PI, 0);
+                ctx.fill();
+                ctx.fillRect(4, -48, 2.5, 5);
+            }
         }
 
         // 7. Şapkalar & Kasklar
