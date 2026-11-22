@@ -48,6 +48,11 @@
                     <span id="audio-mute-icon" style="font-size:16px;">🔊</span>
                     <span id="audio-mute-text" class="tactical-title" style="margin:0;">SFX ON</span>
                 </div>
+
+                <div class="tactical-box" id="hud-retry-btn" style="cursor:pointer; user-select:none; display:flex; align-items:center; gap:6px;" title="Restart Mission">
+                    <span style="font-size:16px;">🔄</span>
+                    <span class="tactical-title" style="margin:0;">RETRY</span>
+                </div>
             </div>
 
             <!-- Bottom Controls & Breath Gauge -->
@@ -143,8 +148,9 @@
                         <div id="victory-reward" class="tactical-value cash-value" style="font-size:24px; margin-top:8px;">+$250</div>
                     </div>
                 </div>
-                <div>
-                    <button id="next-mission-btn" class="primary-btn">NEXT MISSION ➡</button>
+                <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:16px;">
+                    <button id="victory-replay-btn" class="secondary-btn" style="flex:1; min-width:140px; margin:0;">REPLAY 🔄</button>
+                    <button id="next-mission-btn" class="primary-btn" style="flex:1; min-width:180px; margin:0;">NEXT MISSION ➡</button>
                 </div>
             </div>
         </div>
