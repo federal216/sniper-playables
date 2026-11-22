@@ -25,8 +25,8 @@ if (fs.existsSync(audioSrc)) {
 }
 
 // 3. JS dosyalarını birleştir ve esbuild ile sıkıştır
-console.log('⚡ JavaScript dosyaları (audio.js, data.js, engine.js, main.js) sıkıştırılıyor...');
-const jsFiles = ['audio.js', 'data.js', 'engine.js', 'main.js'];
+console.log('⚡ JavaScript dosyaları (avatar.js, audio.js, data.js, engine.js, main.js) sıkıştırılıyor...');
+const jsFiles = ['avatar.js', 'audio.js', 'data.js', 'engine.js', 'main.js'];
 let combinedJs = '';
 jsFiles.forEach(f => {
     combinedJs += fs.readFileSync(path.join(SRC_DIR, f), 'utf-8') + '\n';
@@ -50,7 +50,7 @@ console.log('✅ CSS sıkıştırıldı: dist/style.min.css');
 console.log('📄 Üretim index.html oluşturuluyor...');
 let html = fs.readFileSync(path.join(SRC_DIR, 'index.html'), 'utf-8');
 html = html.replace('<link rel="stylesheet" href="style.css">', '<link rel="stylesheet" href="style.min.css">');
-const scriptBlockRegex = /<script src="audio\.js"><\/script>[\s\S]*?<script src="main\.js"><\/script>/;
+const scriptBlockRegex = /<script src="avatar\.js"><\/script>[\s\S]*?<script src="main\.js"><\/script>/;
 html = html.replace(scriptBlockRegex, '<script src="game.bundle.min.js"></script>');
 fs.writeFileSync(path.join(DIST_DIR, 'index.html'), html, 'utf-8');
 console.log('✅ index.html optimize edildi.');

@@ -51,6 +51,16 @@ document.addEventListener('DOMContentLoaded', () => {
         breathBtn: document.getElementById('breath-btn')
     };
 
+    // Yakışıklı Keskin Nişancı Karakter Portrelerini Ekle
+    if (window.SNIPER_HERO_AVATAR_SVG) {
+        const menuAv = document.getElementById('hero-avatar-menu');
+        const victoryAv = document.getElementById('hero-avatar-victory');
+        const hudAv = document.getElementById('hero-avatar-hud');
+        if (menuAv) menuAv.innerHTML = window.SNIPER_HERO_AVATAR_SVG;
+        if (victoryAv) victoryAv.innerHTML = window.SNIPER_HERO_AVATAR_SVG;
+        if (hudAv) hudAv.innerHTML = window.SNIPER_HERO_AVATAR_SVG;
+    }
+
     // UI Hook Nesnesi
     const uiHooks = {
         showToast(msg, type = 'info') {
