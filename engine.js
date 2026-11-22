@@ -37,6 +37,10 @@ class SniperEngine {
         // Dürbün vs Genel Bakış Modu
         this.isScoped = false; // Başlangıçta geniş Genel Bakış modu
         this.overviewScanTime = 0;
+        this.isThermal = false; // Termal Görüş (FLIR) Modu
+        this.bulletCam = null;  // Ağır Çekim Mermi Kamerası
+        this.shellCasings = []; // Boş Kovan Fırlatma Parçacıkları
+        this.screenShake = 0;   // Ekran Sarsıntısı
 
         // Nefes Tutma
         this.isHoldingBreath = false;
@@ -95,6 +99,10 @@ class SniperEngine {
         const weapon = this.getActiveWeapon();
         // Göreve geniş Genel Bakış (Overview) ile başla ki oyuncu şehri tarayıp hedefi rahatça bulsun
         this.isScoped = false;
+        this.isThermal = false;
+        this.bulletCam = null;
+        this.shellCasings = [];
+        this.screenShake = 0;
         this.scopeZoom = 1.0;
         this.targetZoom = 1.0;
         this.overviewScanTime = 0;
@@ -128,14 +136,36 @@ class SniperEngine {
         if (this.isScoped) {
             this.targetZoom = weapon.zoomLevels[weapon.currentZoomIdx || 0];
             window.soundSystem.playZoom();
-            this.ui.showToast("🎯 Dürbün Açıldı (Hassas Nişan)", "info");
+            this.ui.showToast("🎯 Scope Deployed (Precision Aim)", "info");
         } else {
             this.targetZoom = 1.0;
-            this.setBreath(false); // Dürbün kapalıyken nefes tutmayı sıfırla
+            this.setBreath(false); // Reset breath when leaving scope
             window.soundSystem.playZoom();
-            this.ui.showToast("👁️ Genel Bakış (Şehri Tara)", "info");
+            this.ui.showToast("👁️ Recon Overview (Area Survey)", "info");
         }
         this.ui.onScopeToggled(this.isScoped, this.targetZoom);
+    }
+
+    // Thermal Vision (FLIR Infrared Sensor)
+    toggleThermal() {
+        if (this.state !== 'PLAYING') return;
+        this.isThermal = !this.isThermal;
+        window.soundSystem.playZoom();
+        this.ui.showToast(this.isThermal ? "🌡️ Thermal FLIR Mode Activated" : "👁️ Standard Optical Scope", "info");
+        this.ui.onThermalToggled(this.isThermal);
+    }
+
+    // Boş Kovan Fırlatma (Ekrandan dönerek fırlayan pirinç kovan)
+    ejectCasing() {
+        this.shellCasings.push({
+            x: this.width - 80,
+            y: this.height - 120,
+            vx: -3.5 - Math.random() * 3,
+            vy: -7 - Math.random() * 4,
+            rot: Math.random() * Math.PI,
+            vRot: 0.25 + Math.random() * 0.35,
+            life: 1.0
+        });
     }
 
     initMissionEntities() {
@@ -259,6 +289,8 @@ class SniperEngine {
         // Namlu Geri Tepmesi (Recoil)
         this.recoilOffset.y = -28 / Math.sqrt(this.scopeZoom);
         this.recoilOffset.x = (Math.random() - 0.5) * 12;
+        this.screenShake = 6;
+        this.ejectCasing();
 
         // Balistik & Rüzgar Hesabı
         const crosshairWorldX = this.camera.x + this.swayOffset.x;
@@ -296,31 +328,36 @@ class SniperEngine {
 
             if (isHeadshot || isBodyHit) {
                 hitSomething = true;
-                ent.isAlive = false;
-
-                // Kan ve yere düşme parçacıkları
-                this.addBloodSplatter(ent.x, ent.y - (isHeadshot ? 45 : 15));
-                window.soundSystem.playHitSound(isHeadshot);
 
                 if (ent.isTarget) {
-                    // HEDEF VURULDU! BAŞARILI!
+                    // SİNEMATİK AĞIR ÇEKİM MERMİ KAMERASI (BULLET-CAM)
                     this.state = 'BULLET_CAM';
-                    setTimeout(() => {
-                        window.soundSystem.playVoice(isHeadshot ? 'headshot' : 'target_hit');
-                    }, 350);
-                    setTimeout(() => {
-                        this.handleMissionSuccess(isHeadshot);
-                    }, 1400);
+                    this.bulletCam = {
+                        startX: this.camera.x,
+                        startY: this.camera.y,
+                        targetX: ent.x,
+                        targetY: ent.y - (isHeadshot ? 45 : 15),
+                        targetEnt: ent,
+                        isHeadshot: isHeadshot,
+                        progress: 0.0,
+                        duration: 1.1,
+                        trail: []
+                    };
+                    this.timeScale = 0.2;
                     return;
                 } else if (ent.isHostage) {
-                    // REHİNE VURULDU! BAŞARISIZ!
+                    ent.isAlive = false;
+                    this.addBloodSplatter(ent.x, ent.y - (isHeadshot ? 45 : 15));
+                    window.soundSystem.playHitSound(isHeadshot);
                     window.soundSystem.playVoice('hostage_hit');
-                    this.handleMissionFail("Rehine vuruldu! Görev başarısız.");
+                    this.handleMissionFail("Hostage injured! Mission compromised.");
                     return;
                 } else {
-                    // MASUM SİVİL VURULDU!
+                    ent.isAlive = false;
+                    this.addBloodSplatter(ent.x, ent.y - (isHeadshot ? 45 : 15));
+                    window.soundSystem.playHitSound(isHeadshot);
                     window.soundSystem.playVoice('hostage_hit');
-                    this.handleMissionFail("Masum bir sivil vuruldu!");
+                    this.handleMissionFail("Innocent civilian killed! Mission failed.");
                     return;
                 }
             }
@@ -344,9 +381,9 @@ class SniperEngine {
                 t.panic = true;
                 t.speed = (t.speed >= 0 ? 1 : -1) * 2.8; // Hızlıca koş
             });
-            this.ui.showToast("Hedef silah sesini duydu ve kaçıyor!", "warning");
+            this.ui.showToast("Target heard the gunshot and is fleeing!", "warning");
         } else {
-            this.ui.showToast("Atış ıska geçti! Susturucu sayesinde henüz fark edilmedin.", "info");
+            this.ui.showToast("Shot missed! Suppressor kept you undetected.", "info");
         }
     }
 
@@ -373,10 +410,10 @@ class SniperEngine {
     handleMissionFail(reason) {
         this.state = 'FAILED';
         window.soundSystem.playFail();
-        if (!reason.includes("Rehine") && !reason.includes("sivil")) {
+        if (!reason.includes("Hostage") && !reason.includes("civilian")) {
             window.soundSystem.playVoice('failed');
         }
-        this.ui.onMissionFailed(reason || "Hedef kaçtı veya görevi tamamlayamadın.");
+        this.ui.onMissionFailed(reason || "Target escaped or mission objectives failed.");
     }
 
     addBloodSplatter(x, y) {
@@ -439,6 +476,54 @@ class SniperEngine {
         // Geri tepme yumuşatma
         this.recoilOffset.x *= 0.85;
         this.recoilOffset.y *= 0.85;
+        this.screenShake *= 0.85;
+
+        // Boş Kovan Fiziği
+        for (let i = this.shellCasings.length - 1; i >= 0; i--) {
+            const c = this.shellCasings[i];
+            c.x += c.vx;
+            c.y += c.vy;
+            c.vy += 0.5; // Yerçekimi
+            c.rot += c.vRot;
+            c.life -= dt * 1.2;
+            if (c.life <= 0) this.shellCasings.splice(i, 1);
+        }
+
+        // SİNEMATİK AĞIR ÇEKİM MERMİ KAMERASI (BULLET-CAM)
+        if (this.state === 'BULLET_CAM' && this.bulletCam) {
+            const bc = this.bulletCam;
+            bc.progress += (dt / bc.duration);
+
+            const currentBulletX = bc.startX + (bc.targetX - bc.startX) * Math.min(1.0, bc.progress);
+            const currentBulletY = bc.startY + (bc.targetY - bc.startY) * Math.min(1.0, bc.progress);
+
+            // Kamera mermiyi odaklar ve yakından takip eder
+            this.camera.x = currentBulletX;
+            this.camera.y = currentBulletY;
+            this.targetZoom = 3.6;
+
+            bc.trail.push({ x: currentBulletX, y: currentBulletY });
+            if (bc.trail.length > 24) bc.trail.shift();
+
+            // Mermi hedefe çarptı!
+            if (bc.progress >= 1.0) {
+                bc.targetEnt.isAlive = false;
+                this.addBloodSplatter(bc.targetX, bc.targetY);
+                window.soundSystem.playHitSound(bc.isHeadshot);
+                this.screenShake = 18; // Şiddetli vuruş etkisi
+                this.recoilOffset.y = -16;
+
+                setTimeout(() => {
+                    window.soundSystem.playVoice(bc.isHeadshot ? 'headshot' : 'target_hit');
+                }, 300);
+
+                setTimeout(() => {
+                    this.handleMissionSuccess(bc.isHeadshot);
+                }, 1300);
+
+                this.bulletCam = null;
+            }
+        }
 
         // Kamera yumuşak takip
         this.camera.x += (this.targetCamera.x - this.camera.x) * 0.12;
@@ -533,8 +618,10 @@ class SniperEngine {
         ctx.clearRect(0, 0, this.width, this.height);
 
         const currentZoom = this.scopeZoom;
-        const viewX = this.camera.x + this.swayOffset.x + this.recoilOffset.x;
-        const viewY = this.camera.y + this.swayOffset.y + this.recoilOffset.y;
+        const shakeX = (Math.random() - 0.5) * this.screenShake;
+        const shakeY = (Math.random() - 0.5) * this.screenShake;
+        const viewX = this.camera.x + this.swayOffset.x + this.recoilOffset.x + shakeX;
+        const viewY = this.camera.y + this.swayOffset.y + this.recoilOffset.y + shakeY;
 
         ctx.save();
         // Zoom ve Kamera Merkezleme
@@ -577,12 +664,20 @@ class SniperEngine {
             this.drawEnemySniperLaser(ctx);
         }
 
+        // Sinematik Mermi Kamerası
+        if (this.bulletCam) {
+            this.drawBulletCam(ctx);
+        }
+
         ctx.restore();
 
         // 5. Katman: Hava Durumu (Yağmur)
         if (this.activeMission && this.activeMission.weather === 'rain') {
             this.drawRain(ctx);
         }
+
+        // Fırlayan Boş Kovanlar
+        this.drawShellCasings(ctx);
 
         // 6. Katman: Keskin Nişancı Dürbünü veya Genel Bakış HUD
         if (this.state === 'PLAYING' || this.state === 'BULLET_CAM') {
@@ -612,57 +707,298 @@ class SniperEngine {
     }
 
     drawFarCity(ctx, vx, vy) {
-        // Hafif parallaks kayması
-        const parallaxX = vx * 0.15;
-        ctx.fillStyle = '#0f172a';
+        // 2.5D Derin Parallaks Şehir Katmanı
+        const parallaxX = vx * 0.12;
 
-        // Silüet binaları
-        for (let i = 0; i < 15; i++) {
-            const bx = i * 90 - parallaxX;
-            const bh = 220 + Math.sin(i * 1.8) * 80;
-            ctx.fillRect(bx, 600 - bh, 80, bh);
+        // Uzak Silüet Plazaları
+        ctx.fillStyle = '#090d16';
+        for (let i = 0; i < 18; i++) {
+            const bx = i * 85 - parallaxX;
+            const bh = 240 + Math.sin(i * 1.7) * 90;
+            ctx.fillRect(bx, 620 - bh, 75, bh);
+
+            // Uzak bina tepelerindeki yanıp sönen kırmızı uyarı ışıkları (Aviation Beacon)
+            const blink = Math.sin(performance.now() * 0.004 + i) > 0.3;
+            if (blink && i % 3 === 0) {
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(bx + 37, 620 - bh - 6, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#090d16';
+            }
+
+            // Uzak minik pencere ışıltıları
+            for (let w = 0; w < 4; w++) {
+                if ((i + w) % 2 === 0) {
+                    ctx.fillStyle = 'rgba(253, 224, 71, 0.25)';
+                    ctx.fillRect(bx + 15 + w * 12, 620 - bh + 40 + w * 25, 4, 6);
+                    ctx.fillStyle = '#090d16';
+                }
+            }
         }
     }
 
+    // Gerçekçi Binalar, Dokular, Çatı Ekipmanları ve Aydınlatmalar
     drawMidBuildings(ctx) {
-        // Çevre Binaları (2.5D derinlik)
-        // Sol Bina
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(100, 240, 220, 380);
+        const time = performance.now();
+        const isThermal = this.isThermal;
 
-        // Orta Geniş Plaza
-        ctx.fillStyle = '#334155';
-        ctx.fillRect(360, 180, 260, 440);
+        // --- 1. SOL BİNA: Tarihi Tuğla / Taş Rezidans ---
+        const leftWallColor = isThermal ? '#081226' : '#26161b';
+        ctx.fillStyle = leftWallColor;
+        ctx.fillRect(80, 230, 240, 390);
 
-        // Çatı Korkulukları
-        ctx.fillStyle = '#475569';
-        ctx.fillRect(100, 235, 220, 6);
-        ctx.fillRect(360, 175, 260, 6);
-
-        // Sağ Yüksek Kule
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(660, 140, 240, 480);
-        ctx.fillRect(660, 135, 240, 6);
-
-        // Pencereler ve Aydınlatmalar
-        for (let row = 0; row < 5; row++) {
-            for (let col = 0; col < 3; col++) {
-                // Rastgele sarı/mavi ışıklar
-                const isLit = (row + col) % 2 === 0;
-                ctx.fillStyle = isLit ? 'rgba(253, 224, 71, 0.45)' : 'rgba(30, 41, 59, 0.9)';
-                ctx.fillRect(390 + col * 75, 220 + row * 65, 45, 40);
+        // Tuğla Yatay Derz Çizgileri
+        if (!isThermal) {
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.lineWidth = 1;
+            for (let y = 230; y < 620; y += 18) {
+                ctx.beginPath();
+                ctx.moveTo(80, y);
+                ctx.lineTo(320, y);
+                ctx.stroke();
             }
         }
 
-        // Balkon (Bölüm 3 & 9 için)
-        ctx.fillStyle = '#64748b';
-        ctx.fillRect(400, 310, 180, 8);
-        ctx.fillStyle = 'rgba(100, 116, 139, 0.5)';
-        ctx.fillRect(400, 280, 180, 30);
+        // Yangın Merdiveni (Fire Escape) - Sol Cephe
+        ctx.strokeStyle = isThermal ? '#1e293b' : '#334155';
+        ctx.lineWidth = 2;
+        for (let floor = 0; floor < 4; floor++) {
+            const fy = 270 + floor * 70;
+            // Platform
+            ctx.strokeRect(60, fy, 40, 6);
+            // Korkuluk
+            ctx.strokeRect(60, fy - 16, 40, 16);
+            // Zikzak merdiven
+            ctx.beginPath();
+            ctx.moveTo(95, fy + 6);
+            ctx.lineTo(65, fy + 70);
+            ctx.stroke();
+        }
 
-        // Sokak Zemini
-        ctx.fillStyle = '#0b0f19';
+        // Çatı Su Kulesi (Cedar Wood Water Tower)
+        // Ahşap gövde
+        ctx.fillStyle = isThermal ? '#0f172a' : '#451a03';
+        ctx.fillRect(110, 150, 60, 60);
+        // Metal Çemberler
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(110, 162, 60, 2);
+        ctx.strokeRect(110, 185, 60, 2);
+        ctx.strokeRect(110, 202, 60, 2);
+        // Koni Çatı
+        ctx.fillStyle = isThermal ? '#1e293b' : '#57534e';
+        ctx.beginPath();
+        ctx.moveTo(105, 150);
+        ctx.lineTo(140, 115);
+        ctx.lineTo(175, 150);
+        ctx.closePath();
+        ctx.fill();
+        // Çelik Ayaklar
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(115, 210); ctx.lineTo(110, 230);
+        ctx.moveTo(165, 210); ctx.lineTo(170, 230);
+        ctx.moveTo(115, 210); ctx.lineTo(170, 230);
+        ctx.moveTo(165, 210); ctx.lineTo(110, 230);
+        ctx.stroke();
+
+        // Çatı Havalandırma (HVAC) ve Dönen Pervane
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(200, 195, 50, 35);
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(225, 212, 12, 0, Math.PI * 2);
+        ctx.fill();
+        // Dönen fan bıçakları
+        const fanAngle = time * 0.015;
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(225 - Math.cos(fanAngle) * 10, 212 - Math.sin(fanAngle) * 10);
+        ctx.lineTo(225 + Math.cos(fanAngle) * 10, 212 + Math.sin(fanAngle) * 10);
+        ctx.stroke();
+
+        // Sol Bina Pencereleri
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 3; c++) {
+                const wx = 120 + c * 60;
+                const wy = 260 + r * 65;
+                // Pencere çerçevesi
+                ctx.fillStyle = '#1c1917';
+                ctx.fillRect(wx - 2, wy - 2, 34, 44);
+                // Cam ışığı
+                const isWarm = (r + c) % 2 === 0;
+                ctx.fillStyle = isThermal ? '#0284c7' : (isWarm ? 'rgba(254, 240, 138, 0.7)' : 'rgba(15, 23, 42, 0.85)');
+                ctx.fillRect(wx, wy, 30, 40);
+
+                // Jaluzi / Perde Silüetleri
+                if (!isThermal && isWarm) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+                    for (let j = 0; j < 6; j++) {
+                        ctx.fillRect(wx, wy + j * 4, 30, 1.5);
+                    }
+                }
+            }
+        }
+
+        // --- 2. ORTA BİNA: Modern Cam & Çelik Plaza (Vanguard Plaza) ---
+        const midWallGrad = ctx.createLinearGradient(350, 160, 640, 620);
+        midWallGrad.addColorStop(0, isThermal ? '#081a33' : '#1e293b');
+        midWallGrad.addColorStop(1, isThermal ? '#030712' : '#0f172a');
+        ctx.fillStyle = midWallGrad;
+        ctx.fillRect(350, 160, 290, 460);
+
+        // Çatı Korkuluğu ve Helipad Işıkları
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(350, 155, 290, 6);
+        for (let x = 360; x <= 630; x += 30) {
+            ctx.fillStyle = isThermal ? '#38bdf8' : '#22c55e';
+            ctx.fillRect(x, 153, 4, 2); // Yeşil emniyet ışıkları
+        }
+
+        // Gökdelen Cam Giydirme Cephe (Curtain Wall Panelleri)
+        for (let row = 0; row < 6; row++) {
+            for (let col = 0; col < 4; col++) {
+                const gx = 375 + col * 65;
+                const gy = 185 + row * 65;
+
+                // Cam Refleksiyon Gradyanı (45 derece parlama)
+                const glassGrad = ctx.createLinearGradient(gx, gy, gx + 45, gy + 45);
+                if (isThermal) {
+                    glassGrad.addColorStop(0, '#0369a1');
+                    glassGrad.addColorStop(0.5, '#0c4a6e');
+                    glassGrad.addColorStop(1, '#082f49');
+                } else {
+                    const isLit = (row * 3 + col) % 3 === 0;
+                    if (isLit) {
+                        glassGrad.addColorStop(0, 'rgba(56, 189, 248, 0.6)');
+                        glassGrad.addColorStop(0.4, 'rgba(253, 224, 71, 0.8)');
+                        glassGrad.addColorStop(1, 'rgba(30, 41, 59, 0.9)');
+                    } else {
+                        glassGrad.addColorStop(0, 'rgba(30, 58, 138, 0.8)');
+                        glassGrad.addColorStop(0.6, 'rgba(15, 23, 42, 0.95)');
+                        glassGrad.addColorStop(1, 'rgba(2, 6, 23, 0.95)');
+                    }
+                }
+
+                ctx.fillStyle = glassGrad;
+                ctx.fillRect(gx, gy, 48, 45);
+
+                // Çelik Çerçeve
+                ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(gx, gy, 48, 45);
+            }
+        }
+
+        // Neon Otel / Bar Tabelası (Canlı Neon Parıltısı)
+        if (!isThermal) {
+            ctx.save();
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 12;
+            ctx.font = '900 13px sans-serif';
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillText('HOTEL VANGUARD', 420, 175);
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        // VIP Teras Balkonu (Bölüm 3 & 9)
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(390, 310, 210, 8); // Zemin tabla
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.25)'; // Cam balkon korkuluğu
+        ctx.fillRect(390, 275, 210, 35);
+        ctx.strokeStyle = '#94a3b8'; // Krom küpeşte
+        ctx.lineWidth = 2;
+        ctx.strokeRect(390, 275, 210, 35);
+
+        // --- 3. SAĞ BİNA: Telekomünikasyon Kulesi & Helikopter Pisti ---
+        ctx.fillStyle = isThermal ? '#08182e' : '#111827';
+        ctx.fillRect(680, 130, 240, 490);
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(680, 125, 240, 6);
+
+        // Çatı İletişim Anteni (Yüksek çelik kule)
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(740, 125); ctx.lineTo(740, 40);
+        ctx.moveTo(730, 125); ctx.lineTo(740, 75); ctx.lineTo(750, 125);
+        ctx.stroke();
+
+        // Tepe Yanıp Sönen Kırmızı Uyarı Işığı (Strobe Beacon)
+        const strobe = Math.sin(time * 0.007) > 0.1;
+        ctx.fillStyle = strobe ? '#ef4444' : '#7f1d1d';
+        ctx.beginPath();
+        ctx.arc(740, 38, strobe ? 5 : 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Parabolik Uydu Çanağı (Satellite Dish)
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(840, 105, 18, 0.8 * Math.PI, 1.8 * Math.PI);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(840, 105); ctx.lineTo(828, 92);
+        ctx.stroke();
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(826, 90, 4, 4);
+
+        // Sağ Kule Pencereleri & Işıklar
+        for (let r = 0; r < 7; r++) {
+            for (let c = 0; c < 3; c++) {
+                const px = 715 + c * 65;
+                const py = 150 + r * 62;
+                const isLit = (r + c * 2) % 3 !== 0;
+                ctx.fillStyle = isThermal ? '#0369a1' : (isLit ? 'rgba(56, 189, 248, 0.7)' : 'rgba(17, 24, 39, 0.9)');
+                ctx.fillRect(px, py, 42, 38);
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(px, py, 42, 38);
+            }
+        }
+
+        // --- 4. ZEMİN CADDE & SOKAK DETAYLARI ---
+        ctx.fillStyle = isThermal ? '#030712' : '#0a0f1d';
         ctx.fillRect(0, 520, 1100, 180);
+
+        // Asfalt Yol Şeritleri
+        ctx.strokeStyle = isThermal ? '#1e293b' : '#eab308'; // Çift sarı şerit
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 565); ctx.lineTo(1100, 565);
+        ctx.moveTo(0, 569); ctx.lineTo(1100, 569);
+        ctx.stroke();
+
+        // Sokak Lambası Direği & Işık Konisi (Streetlamp Lighting)
+        if (!isThermal) {
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(510, 520); ctx.lineTo(510, 440);
+            ctx.lineTo(525, 435);
+            ctx.stroke();
+            // Lamba Başlığı
+            ctx.fillStyle = '#fef08a';
+            ctx.beginPath();
+            ctx.arc(525, 437, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Yere Vuran Işık Konisi
+            const lightGrad = ctx.createRadialGradient(525, 440, 5, 525, 520, 110);
+            lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.25)');
+            lightGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = lightGrad;
+            ctx.beginPath();
+            ctx.moveTo(525, 440);
+            ctx.lineTo(440, 540);
+            ctx.lineTo(610, 540);
+            ctx.closePath();
+            ctx.fill();
+        }
     }
 
     // İnsan Anatomisine Sahip Gelişmiş Karakter Çizici (Gölge, Beden, Kollar, Kıyafet, Saç)
@@ -694,6 +1030,30 @@ class SniperEngine {
 
         ctx.save();
         ctx.translate(t.x, t.y);
+
+        if (this.isThermal) {
+            // TERMAL GÖRÜŞ (FLIR INFRARED HEAT MAP)
+            ctx.fillStyle = '#ef4444'; // Dış kızılötesi ısı
+            ctx.beginPath();
+            ctx.ellipse(0, -22, 16, 28, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#facc15'; // Sıcak vücut çekirdeği
+            ctx.beginPath();
+            ctx.ellipse(0, -22, 11, 23, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff'; // En sıcak çekirdek (göğüs ve kafa)
+            ctx.beginPath();
+            ctx.arc(0, -42, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(0, -25, 7, 14, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+            return;
+        }
 
         // 1. Zemin Gölgesi (Ambient Occlusion Shadow)
         ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
@@ -916,48 +1276,48 @@ class SniperEngine {
             ctx.fill();
             ctx.stroke();
 
-            // "HEDEF" Etiketi
+            // "SUSPECT" Target Marker
             ctx.font = 'bold 10px monospace';
             ctx.fillStyle = '#fef08a';
             ctx.textAlign = 'center';
-            ctx.fillText('ŞÜPHELİ', 0, -82 - pulse * 6);
+            ctx.fillText('SUSPECT', 0, -82 - pulse * 6);
             ctx.restore();
         }
 
         ctx.restore();
     }
 
-    // GENEL BAKIŞ MODU ARAYÜZÜ (Geniş Şehir Taraması)
+    // RECON OVERVIEW HUD (Wide City Survey Mode)
     drawOverviewOverlay(ctx) {
         const w = this.width;
         const h = this.height;
 
         ctx.save();
 
-        // 1. Dört Köşe Taktik Kamera Çerçevesi [  ]
+        // 1. Tactical Frame Corners [  ]
         ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
         ctx.lineWidth = 2;
         const cornerSize = 40;
         const pad = 30;
 
-        // Sol Üst
+        // Top Left
         ctx.beginPath();
         ctx.moveTo(pad, pad + cornerSize); ctx.lineTo(pad, pad); ctx.lineTo(pad + cornerSize, pad);
         ctx.stroke();
-        // Sağ Üst
+        // Top Right
         ctx.beginPath();
         ctx.moveTo(w - pad - cornerSize, pad); ctx.lineTo(w - pad, pad); ctx.lineTo(w - pad, pad + cornerSize);
         ctx.stroke();
-        // Sol Alt
+        // Bottom Left
         ctx.beginPath();
         ctx.moveTo(pad, h - pad - cornerSize); ctx.lineTo(pad, h - pad); ctx.lineTo(pad + cornerSize, h - pad);
         ctx.stroke();
-        // Sağ Alt
+        // Bottom Right
         ctx.beginPath();
         ctx.moveTo(w - pad - cornerSize, h - pad); ctx.lineTo(w - pad, h - pad); ctx.lineTo(w - pad, h - pad - cornerSize);
         ctx.stroke();
 
-        // 2. Merkez Hafif Nişangah Kutusu (Görüşü engellemez)
+        // 2. Light Center Reticle Box
         const cx = w / 2;
         const cy = h / 2;
         ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
@@ -970,23 +1330,93 @@ class SniperEngine {
         ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy + 8);
         ctx.stroke();
 
-        // 3. Üst Bilgi Rozeti
+        // 3. Top Info Pill
         ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
         ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.roundRect(cx - 190, 26, 380, 34, 18);
+        ctx.roundRect(cx - 195, 26, 390, 34, 18);
         ctx.fill();
         ctx.stroke();
 
         ctx.font = 'bold 12px monospace';
         ctx.fillStyle = '#38bdf8';
         ctx.textAlign = 'center';
-        ctx.fillText('👁️ GENEL BAKIŞ MODU — ŞEHRİ TARA VE HEDEFİ BUL', cx, 42);
+        ctx.fillText('👁️ RECON OVERVIEW — SCAN AREA TO IDENTIFY TARGET', cx, 42);
         ctx.font = '10px sans-serif';
         ctx.fillStyle = '#94a3b8';
-        ctx.fillText('Nişan almak için [SAĞ TIK] yap veya [NİŞAN AL] butonuna bas', cx, 54);
+        ctx.fillText('Aim & Scope: [RIGHT CLICK] or tap [SCOPE IN]', cx, 54);
 
+        ctx.restore();
+    }
+
+    // Sinematik Mermi Kamerası Çizimi (Bullet-Cam)
+    drawBulletCam(ctx) {
+        if (!this.bulletCam) return;
+        const bc = this.bulletCam;
+        const curX = bc.startX + (bc.targetX - bc.startX) * Math.min(1.0, bc.progress);
+        const curY = bc.startY + (bc.targetY - bc.startY) * Math.min(1.0, bc.progress);
+        const angle = Math.atan2(bc.targetY - bc.startY, bc.targetX - bc.startX);
+
+        ctx.save();
+        // 1. Duman ve Hava Şok Dalgası İzi
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        bc.trail.forEach((p, idx) => {
+            if (idx === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+
+        // 2. Altın / Pirinç .50 Cal Mermi
+        ctx.translate(curX, curY);
+        ctx.rotate(angle);
+
+        // Şok halkaları
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(-10, 0, 5, 12, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Mermi gövdesi
+        const bGrad = ctx.createLinearGradient(0, -5, 0, 5);
+        bGrad.addColorStop(0, '#fef08a');
+        bGrad.addColorStop(0.5, '#eab308');
+        bGrad.addColorStop(1, '#ca8a04');
+        ctx.fillStyle = bGrad;
+        ctx.beginPath();
+        ctx.moveTo(14, 0); // Sivri aerodinamik uç
+        ctx.lineTo(2, 5);
+        ctx.lineTo(-12, 5);
+        ctx.lineTo(-12, -5);
+        ctx.lineTo(2, -5);
+        ctx.closePath();
+        ctx.fill();
+
+        // Arka parlama
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.arc(-12, 0, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    // Boş Kovan Fırlatma Çizimi
+    drawShellCasings(ctx) {
+        ctx.save();
+        this.shellCasings.forEach(c => {
+            ctx.save();
+            ctx.translate(c.x, c.y);
+            ctx.rotate(c.rot);
+            ctx.fillStyle = '#eab308';
+            ctx.fillRect(-6, -2.5, 12, 5);
+            ctx.fillStyle = '#713f12';
+            ctx.fillRect(4, -3, 2, 6); // Rim
+            ctx.restore();
+        });
         ctx.restore();
     }
 

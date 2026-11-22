@@ -109,7 +109,7 @@ const SNIPER_HERO_AVATAR_SVG = `
 
     <!-- Rütbe / İsim Rozeti -->
     <rect x="24" y="206" width="152" height="24" rx="6" fill="rgba(15, 23, 42, 0.85)" stroke="#38bdf8" stroke-width="1"/>
-    <text x="100" y="222" font-family="'Segoe UI', sans-serif" font-size="11" font-weight="bold" fill="#38bdf8" text-anchor="middle" letter-spacing="1.5">KOD ADI: KARTAL 1</text>
+    <text x="100" y="222" font-family="'Segoe UI', sans-serif" font-size="11" font-weight="bold" fill="#38bdf8" text-anchor="middle" letter-spacing="1.5">CODENAME: EAGLE 1</text>
 </svg>
 `;
 

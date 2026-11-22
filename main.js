@@ -1,10 +1,10 @@
-// UI ve Giriş (Input / Kontrol) Yönetimi
+// UI & Input Management (English Localization for YouTube Playables)
 
 document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('game-canvas');
     const toast = document.getElementById('toast-notification');
 
-    // UI Elemanları
+    // UI Elements
     const els = {
         timerVal: document.getElementById('timer-val'),
         cashVal: document.getElementById('cash-val'),
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
         breathFill: document.getElementById('breath-fill'),
         missionNameHud: document.getElementById('mission-name-hud'),
 
-        // Modallar
+        // Modals
         menuModal: document.getElementById('menu-modal'),
         briefingModal: document.getElementById('briefing-modal'),
         victoryModal: document.getElementById('victory-modal'),
@@ -22,18 +22,18 @@ document.addEventListener('DOMContentLoaded', () => {
         armoryModal: document.getElementById('armory-modal'),
         levelsModal: document.getElementById('levels-modal'),
 
-        // Brifing Elemanları
+        // Briefing Elements
         briefingTitle: document.getElementById('briefing-title'),
         briefingText: document.getElementById('briefing-text'),
         briefingClue: document.getElementById('briefing-clue'),
         briefingReward: document.getElementById('briefing-reward'),
 
-        // Sonuç Elemanları
+        // Result Elements
         victoryReward: document.getElementById('victory-reward'),
         victoryHeadshotBadge: document.getElementById('victory-headshot-badge'),
         failReason: document.getElementById('fail-reason'),
 
-        // Butonlar
+        // Buttons
         startBriefingBtn: document.getElementById('start-briefing-btn'),
         launchMissionBtn: document.getElementById('launch-mission-btn'),
         nextMissionBtn: document.getElementById('next-mission-btn'),
@@ -43,15 +43,16 @@ document.addEventListener('DOMContentLoaded', () => {
         openLevelsBtn: document.getElementById('open-levels-btn'),
         closeLevelsBtn: document.getElementById('close-levels-btn'),
 
-        // Kontrol Butonları
+        // Control Buttons
         scopeToggleBtn: document.getElementById('scope-toggle-btn'),
         scopeToggleText: document.getElementById('scope-toggle-text'),
+        thermalBtn: document.getElementById('thermal-btn'),
         fireBtn: document.getElementById('fire-btn'),
         zoomBtn: document.getElementById('zoom-btn'),
         breathBtn: document.getElementById('breath-btn')
     };
 
-    // Yakışıklı Keskin Nişancı Karakter Portrelerini Ekle
+    // Handsome Operative Avatar Placement
     if (window.SNIPER_HERO_AVATAR_SVG) {
         const menuAv = document.getElementById('hero-avatar-menu');
         const victoryAv = document.getElementById('hero-avatar-victory');
@@ -61,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hudAv) hudAv.innerHTML = window.SNIPER_HERO_AVATAR_SVG;
     }
 
-    // UI Hook Nesnesi
+    // UI Hooks
     const uiHooks = {
         showToast(msg, type = 'info') {
             toast.textContent = msg;
@@ -83,14 +84,20 @@ document.addEventListener('DOMContentLoaded', () => {
             els.missionNameHud.textContent = mission.title;
             els.zoomVal.textContent = isScoped ? `${weapon.zoomLevels[weapon.currentZoomIdx || 0]}x` : '1x';
             if (els.scopeToggleText) {
-                els.scopeToggleText.textContent = isScoped ? '👁️ GENEL BAKIŞ' : '🎯 NİŞAN AL';
+                els.scopeToggleText.textContent = isScoped ? '👁️ RECON' : '🎯 SCOPE IN';
             }
         },
         onScopeToggled(isScoped, zoom) {
             if (els.scopeToggleText) {
-                els.scopeToggleText.textContent = isScoped ? '👁️ GENEL BAKIŞ' : '🎯 NİŞAN AL';
+                els.scopeToggleText.textContent = isScoped ? '👁️ RECON' : '🎯 SCOPE IN';
             }
             els.zoomVal.textContent = isScoped ? `${zoom}x` : '1x';
+        },
+        onThermalToggled(isThermal) {
+            if (els.thermalBtn) {
+                els.thermalBtn.style.background = isThermal ? '#0d9488' : '#0f766e';
+                els.thermalBtn.style.borderColor = isThermal ? '#5eead4' : '#2dd4bf';
+            }
         },
         onMissionComplete(mission, earned, isHeadshot) {
             hideAllModals();
@@ -105,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Motoru Başlat
+    // Initialize Game Engine
     const engine = new SniperEngine(canvas, uiHooks);
 
     function hideAllModals() {
@@ -122,12 +129,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const m = MISSIONS_DATA[missionIdx];
         els.briefingTitle.textContent = m.title;
         els.briefingText.textContent = m.briefing;
-        els.briefingClue.textContent = `🎯 İPUCU: ${m.clue}`;
-        els.briefingReward.textContent = `ÖDÜL: $${m.reward}`;
+        els.briefingClue.textContent = `🎯 TARGET CLUE: ${m.clue}`;
+        els.briefingReward.textContent = `BOUNTY: $${m.reward}`;
         els.briefingModal.classList.remove('hidden');
     }
 
-    // Modal Buton Etkileşimleri
+    // Modal Interactions
     els.startBriefingBtn.addEventListener('click', () => {
         showBriefing(engine.playerState.currentMissionIdx);
     });
@@ -141,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (nextIdx < MISSIONS_DATA.length) {
             showBriefing(nextIdx);
         } else {
-            uiHooks.showToast("Tebrikler! Tüm 20 bölümü tamamladın!", "info");
+            uiHooks.showToast("Congratulations! All 20 missions completed!", "info");
             els.menuModal.classList.remove('hidden');
         }
     });
@@ -150,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         engine.startMission(engine.playerState.currentMissionIdx);
     });
 
-    // --- CEPHANE / SİLAH VE YÜKSELTME SİSTEMİ ---
+    // --- ARMORY & WEAPON MODIFICATIONS SYSTEM ---
     function renderArmory() {
         const grid = document.getElementById('weapons-catalog');
         grid.innerHTML = '';
@@ -167,10 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="tactical-title">${w.type}</div>
                 <div class="weapon-desc">${w.description}</div>
                 <div style="font-size:12px; color:#38bdf8; margin-bottom:8px;">
-                    Hasar: ${w.damage} | Zoom: ${w.zoomLevels.join(', ')}x ${w.silenced ? '| 🔇 Susturuculu' : ''}
+                    Damage: ${w.damage} | Zoom: ${w.zoomLevels.join(', ')}x ${w.silenced ? '| 🔇 Suppressed' : ''}
                 </div>
                 <button class="buy-btn ${isEquipped ? 'owned' : ''}" data-id="${w.id}">
-                    ${isEquipped ? 'KUŞANILDI' : (isOwned ? 'KUŞAN' : `SATIN AL ($${w.price})`)}
+                    ${isEquipped ? 'EQUIPPED' : (isOwned ? 'EQUIP' : `PURCHASE ($${w.price})`)}
                 </button>
             `;
 
@@ -181,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     engine.playerState.currentWeaponId = w.id;
                     engine.saveData();
                     renderArmory();
-                    uiHooks.showToast(`${w.name} kuşandı!`, "info");
+                    uiHooks.showToast(`${w.name} equipped!`, "info");
                 } else {
                     if (engine.playerState.cash >= w.price) {
                         engine.playerState.cash -= w.price;
@@ -189,9 +196,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         engine.playerState.currentWeaponId = w.id;
                         engine.saveData();
                         renderArmory();
-                        uiHooks.showToast(`${w.name} satın alındı ve kuşandı!`, "info");
+                        uiHooks.showToast(`${w.name} purchased and equipped!`, "info");
                     } else {
-                        uiHooks.showToast("Yetersiz bakiye! Görev tamamlayıp para kazan.", "warning");
+                        uiHooks.showToast("Insufficient bounty funds! Complete contracts to earn cash.", "warning");
                     }
                 }
             });
@@ -199,7 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.appendChild(card);
         });
 
-        // Yükseltmeler
         renderUpgradesList();
     }
 
@@ -216,11 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
             row.style.cssText = 'background:#1e293b; padding:12px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;';
             row.innerHTML = `
                 <div>
-                    <div style="font-weight:700; font-size:14px;">${u.name} (Seviye ${currentLvl}/${u.maxLevel})</div>
+                    <div style="font-weight:700; font-size:14px;">${u.name} (Tier ${currentLvl}/${u.maxLevel})</div>
                     <div style="font-size:12px; color:#94a3b8;">${u.effect}</div>
                 </div>
                 <button class="primary-btn" style="padding:6px 14px; font-size:13px;" ${isMax ? 'disabled' : ''}>
-                    ${isMax ? 'MAKSİMUM' : `YÜKSELT ($${cost})`}
+                    ${isMax ? 'MAX TIER' : `UPGRADE ($${cost})`}
                 </button>
             `;
 
@@ -232,9 +238,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         engine.playerState.upgrades[u.id] = currentLvl + 1;
                         engine.saveData();
                         renderArmory();
-                        uiHooks.showToast(`${u.name} yükseltildi!`, "info");
+                        uiHooks.showToast(`${u.name} upgraded!`, "info");
                     } else {
-                        uiHooks.showToast("Yetersiz para!", "warning");
+                        uiHooks.showToast("Insufficient cash!", "warning");
                     }
                 });
             } else {
@@ -256,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.menuModal.classList.remove('hidden');
     });
 
-    // --- BÖLÜM SEÇİMİ (20 Bölüm) ---
+    // --- 20 MISSIONS DIRECTORY ---
     function renderLevelSelect() {
         const grid = document.getElementById('levels-grid');
         grid.innerHTML = '';
@@ -274,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 border: 1px solid ${isUnlocked ? '#38bdf8' : '#334155'};
                 color: ${isUnlocked ? '#f8fafc' : '#64748b'};
             `;
-            btn.innerHTML = `Bölüm ${m.id}<br><span style="font-size:11px; font-weight:normal;">${isUnlocked ? `$${m.reward}` : '🔒 Kilitli'}</span>`;
+            btn.innerHTML = `Mission ${m.id}<br><span style="font-size:11px; font-weight:normal;">${isUnlocked ? `$${m.reward}` : '🔒 Locked'}</span>`;
 
             if (isUnlocked) {
                 btn.addEventListener('click', () => {
@@ -297,25 +303,24 @@ document.addEventListener('DOMContentLoaded', () => {
         els.menuModal.classList.remove('hidden');
     });
 
-    // --- FARE & DOKUNMATİK KONTROLLER ---
+    // --- MOUSE & TOUCH CONTROLS ---
     let isDragging = false;
     let lastX = 0;
     let lastY = 0;
 
-    // Masaüstü Fare Nişan Alma (Canvas üzerinde hareket ettikçe dürbünü oynatır)
+    // Desktop Mouse Aiming
     canvas.addEventListener('mousemove', (e) => {
         if (engine.state !== 'PLAYING') return;
         const rect = canvas.getBoundingClientRect();
         const mouseX = (e.clientX - rect.left) / rect.width;
         const mouseY = (e.clientY - rect.top) / rect.height;
 
-        // Ekran merkezine göre kaydırma miktarı
         const dx = (mouseX - 0.5) * 22;
         const dy = (mouseY - 0.5) * 22;
         engine.aim(dx, dy);
     });
 
-    // Mobil Dokunmatik Nişan Alma
+    // Mobile Touch Drag Aiming
     canvas.addEventListener('touchstart', (e) => {
         if (e.touches.length > 0) {
             isDragging = true;
@@ -337,18 +342,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     canvas.addEventListener('touchend', () => { isDragging = false; });
 
-    // Dürbün / Genel Bakış Değiştirme Butonu
+    // Buttons
     if (els.scopeToggleBtn) {
         els.scopeToggleBtn.addEventListener('click', () => engine.toggleScope());
     }
+    if (els.thermalBtn) {
+        els.thermalBtn.addEventListener('click', () => engine.toggleThermal());
+    }
 
-    // Ateş Butonu
     els.fireBtn.addEventListener('click', () => engine.pullTrigger());
-
-    // Zoom Butonu
     els.zoomBtn.addEventListener('click', () => engine.cycleZoom());
 
-    // Nefes Tut Butonu (Bas-çek)
+    // Breath Focus Control
     const startBreath = () => {
         engine.setBreath(true);
         els.breathBtn.classList.add('active');
@@ -363,12 +368,15 @@ document.addEventListener('DOMContentLoaded', () => {
     els.breathBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startBreath(); });
     els.breathBtn.addEventListener('touchend', endBreath);
 
-    // Klavye Kısayolları (Masaüstü için)
+    // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
         if (engine.state !== 'PLAYING') return;
         if (e.code === 'KeyQ' || e.code === 'Tab') {
             e.preventDefault();
             engine.toggleScope();
+        } else if (e.code === 'KeyT') {
+            e.preventDefault();
+            engine.toggleThermal();
         } else if (e.code === 'Space') {
             engine.pullTrigger();
         } else if (e.code === 'KeyZ') {
@@ -384,20 +392,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Fare Tıklaması ile Ateş
+    // Left Click to Fire
     canvas.addEventListener('mousedown', (e) => {
         if (engine.state === 'PLAYING' && e.button === 0) {
             engine.pullTrigger();
         }
     });
 
-    // Sağ Tık ile Dürbün / Genel Bakış Modu Değiştirme
+    // Right Click to Scope / Recon
     canvas.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         engine.toggleScope();
     });
 
-    // YouTube Playables SDK Entegrasyonu (Varsa otomatik algılar)
+    // YouTube Playables SDK Lifecycle Hooks
     if (window.ytgame) {
         window.ytgame.game.firstFrameReady();
         window.ytgame.game.gameReady();
