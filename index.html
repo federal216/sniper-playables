@@ -15,9 +15,12 @@
         <!-- Oyun İçi HUD Göstergeleri -->
         <div id="hud-overlay">
             <div class="hud-top">
-                <div class="tactical-box">
-                    <div class="tactical-title">GÖREV</div>
-                    <div id="mission-name-hud" class="tactical-value" style="font-size:16px;">Bölüm 1</div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <div style="width: 48px; height: 58px; border-radius: 8px; overflow: hidden; border: 1.5px solid #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.4); flex-shrink: 0;" id="hero-avatar-hud"></div>
+                    <div class="tactical-box">
+                        <div class="tactical-title">OPERATÖR: KARTAL 1</div>
+                        <div id="mission-name-hud" class="tactical-value" style="font-size:16px;">Bölüm 1</div>
+                    </div>
                 </div>
 
                 <div class="ballistics-widget">
@@ -85,16 +88,23 @@
 
         <!-- MENÜ MODAL -->
         <div id="menu-modal" class="screen-modal">
-            <div class="modal-card">
-                <div style="font-size: 48px; margin-bottom: 8px;">🎯</div>
-                <div class="modal-header">SHADOW SNIPER 2.5D</div>
-                <p style="color:#94a3b8; font-size:14px; margin-bottom:24px;">
-                    YouTube Playables Taktik Keskin Nişancı Simülasyonu
-                </p>
-                <div style="display:flex; flex-direction:column; gap:12px; max-width:320px; margin: 0 auto;">
-                    <button id="start-briefing-btn" class="primary-btn">OYUNA BAŞLA</button>
-                    <button id="open-armory-btn" class="secondary-btn">🔫 SİLAH DOLABI & GELİŞTİRME</button>
-                    <button id="open-levels-btn" class="secondary-btn">📋 20 BÖLÜM LİSTESİ</button>
+            <div class="modal-card" style="max-width: 660px;">
+                <div style="display:flex; gap: 24px; align-items: center; justify-content: center; flex-wrap: wrap;">
+                    <!-- Yakışıklı ve Şık Keskin Nişancı Portresi -->
+                    <div style="width: 170px; height: 215px; flex-shrink: 0;" id="hero-avatar-menu"></div>
+                    
+                    <div style="flex: 1; min-width: 260px; text-align: left;">
+                        <div class="tactical-title" style="color:#38bdf8; margin-bottom: 4px;">ELİT KESKİN NİŞANCI BİRİMİ</div>
+                        <div class="modal-header" style="text-align: left; margin-bottom: 6px; font-size:26px;">SHADOW SNIPER 2.5D</div>
+                        <p style="color:#94a3b8; font-size:13px; line-height:1.5; margin-bottom:18px;">
+                            Operatör Kartal: Kusursuz nişan kabiliyeti, şık takım elbisesi ve soğukkanlılığıyla hedefini asla ıskalamayan elit ajan.
+                        </p>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <button id="start-briefing-btn" class="primary-btn">GÖREVE BAŞLA</button>
+                            <button id="open-armory-btn" class="secondary-btn" style="margin-left:0;">🔫 SİLAH DOLABI & GELİŞTİRME</button>
+                            <button id="open-levels-btn" class="secondary-btn" style="margin-left:0;">📋 20 BÖLÜM LİSTESİ</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -115,14 +125,18 @@
 
         <!-- ZAFER MODAL -->
         <div id="victory-modal" class="screen-modal hidden">
-            <div class="modal-card">
-                <div style="font-size: 52px; margin-bottom: 6px;">🎖️</div>
-                <div class="modal-header" style="color:#4ade80;">GÖREV BAŞARILI!</div>
-                <div id="victory-headshot-badge" style="display:none; background:#dc2626; color:#fff; padding:4px 12px; border-radius:20px; font-weight:700; font-size:13px; margin-bottom:12px;">
-                    💥 KUSURSUZ KAFA VURUŞU! (HEADSHOT)
+            <div class="modal-card" style="max-width: 560px;">
+                <div style="display:flex; align-items:center; justify-content:center; gap:20px; margin-bottom:16px;">
+                    <div style="width: 120px; height: 145px; flex-shrink: 0;" id="hero-avatar-victory"></div>
+                    <div style="text-align:left;">
+                        <div class="modal-header" style="color:#4ade80; margin-bottom:4px; font-size:24px;">GÖREV BAŞARILI!</div>
+                        <div id="victory-headshot-badge" style="display:none; background:#dc2626; color:#fff; padding:3px 10px; border-radius:12px; font-weight:700; font-size:12px; margin-bottom:8px;">
+                            💥 KUSURSUZ KAFA VURUŞU!
+                        </div>
+                        <p style="color:#cbd5e1; font-size:14px; margin: 4px 0;">"Hedef etkisiz hale getirildi merkez. Bölge temiz."</p>
+                        <div id="victory-reward" class="tactical-value cash-value" style="font-size:24px; margin-top:8px;">+$200</div>
+                    </div>
                 </div>
-                <p style="color:#cbd5e1; font-size:15px; margin: 10px 0;">Hedef etkisiz hale getirildi. Bölge güvenli.</p>
-                <div id="victory-reward" class="tactical-value cash-value" style="font-size:28px; margin-bottom:24px;">+$200</div>
                 <div>
                     <button id="next-mission-btn" class="primary-btn">SONRAKİ BÖLÜM ➡</button>
                 </div>
