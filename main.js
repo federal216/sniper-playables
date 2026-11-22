@@ -353,6 +353,19 @@ document.addEventListener('DOMContentLoaded', () => {
     els.fireBtn.addEventListener('click', () => engine.pullTrigger());
     els.zoomBtn.addEventListener('click', () => engine.cycleZoom());
 
+    // Audio Mute Toggle Control
+    const muteBtn = document.getElementById('audio-mute-btn');
+    const muteIcon = document.getElementById('audio-mute-icon');
+    const muteText = document.getElementById('audio-mute-text');
+    if (muteBtn) {
+        muteBtn.addEventListener('click', () => {
+            const isMuted = window.soundSystem.toggleMute();
+            if (muteIcon) muteIcon.textContent = isMuted ? '🔇' : '🔊';
+            if (muteText) muteText.textContent = isMuted ? 'MUTED' : 'SFX ON';
+            uiHooks.showToast(isMuted ? '🔇 Audio Muted' : '🔊 Audio Enabled', 'info');
+        });
+    }
+
     // Breath Focus Control
     const startBreath = () => {
         engine.setBreath(true);

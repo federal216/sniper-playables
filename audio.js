@@ -277,6 +277,15 @@ class SoundSystem {
         osc.stop(now + 0.5);
     }
 
+    // Ses Aç / Kapa (Mute / Unmute)
+    toggleMute() {
+        this.muted = !this.muted;
+        if (this.muted) {
+            this.stopHeartbeat();
+        }
+        return this.muted;
+    }
+
     // Taktik Telsiz Seslendirmeleri (Edge-TTS tarafından üretildi)
     playVoice(name) {
         if (this.muted) return;

@@ -299,7 +299,7 @@ class SniperEngine {
         // Rüzgar sapması: Barrett gibi ağır tüfeklerde rüzgar etkisi %70 azalır
         const windResistance = weapon.id === 'barrett_m82' ? 0.2 : 0.8;
         const windDrift = (this.activeMission.wind || 0) * (this.activeMission.distance / 120) * windResistance;
-        const bulletImpactX = crosshairWorldX - windDrift;
+        const bulletImpactX = crosshairWorldX + windDrift;
         const bulletImpactY = crosshairWorldY;
 
         // Mermi İzi / Patlama Parçacığı
