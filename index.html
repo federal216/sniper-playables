@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sniper 2.5D — YouTube Playables</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="game-wrapper">
+        <!-- 2.5D Canvas Çizim Alanı -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Oyun İçi HUD Göstergeleri -->
+        <div id="hud-overlay">
+            <div class="hud-top">
+                <div class="tactical-box">
+                    <div class="tactical-title">GÖREV</div>
+                    <div id="mission-name-hud" class="tactical-value" style="font-size:16px;">Bölüm 1</div>
+                </div>
+
+                <div class="ballistics-widget">
+                    <div class="tactical-box">
+                        <div class="tactical-title">RÜZGAR</div>
+                        <div id="wind-val" class="tactical-value">0.0 m/s</div>
+                    </div>
+                    <div class="tactical-box">
+                        <div class="tactical-title">MESAFE</div>
+                        <div id="dist-val" class="tactical-value">180m</div>
+                    </div>
+                </div>
+
+                <div class="tactical-box">
+                    <div class="tactical-title">BAKİYE</div>
+                    <div id="cash-val" class="tactical-value cash-value">$500</div>
+                </div>
+
+                <div class="tactical-box">
+                    <div class="tactical-title">KALAN SÜRE</div>
+                    <div id="timer-val" class="tactical-value timer-value">30s</div>
+                </div>
+            </div>
+
+            <!-- Alt Kontroller & Nefes Barı -->
+            <div class="hud-bottom">
+                <div class="tactical-box breath-container">
+                    <div class="tactical-title">NEFES & ODAKLANMA</div>
+                    <div class="breath-bar-bg">
+                        <div id="breath-fill"></div>
+                    </div>
+                </div>
+
+                <!-- Butonlar (Hem mobil hem masaüstü destekli) -->
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <button id="zoom-btn" class="control-btn">
+                        <span>🔍 ZOOM</span> <span id="zoom-val" style="color:#38bdf8;">2x</span>
+                    </button>
+                    <button id="breath-btn" class="control-btn breath-btn">
+                        <span>🫁 NEFES TUT</span>
+                    </button>
+                    <button id="fire-btn" class="control-btn fire-btn">
+                        <span>🎯 ATEŞ ET</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Masaüstü İpuçları -->
+            <div class="desktop-hints">
+                <span><kbd>SOL TIK</kbd> Ateş Et</span>
+                <span><kbd>SAĞ TIK / Z</kbd> Zoom</span>
+                <span><kbd>SHIFT / BOŞLUK</kbd> Nefes Tut</span>
+            </div>
+        </div>
+
+        <!-- Bildirim Balonu -->
+        <div id="toast-notification">Bildirim</div>
+
+        <!-- MENÜ MODAL -->
+        <div id="menu-modal" class="screen-modal">
+            <div class="modal-card">
+                <div style="font-size: 48px; margin-bottom: 8px;">🎯</div>
+                <div class="modal-header">SHADOW SNIPER 2.5D</div>
+                <p style="color:#94a3b8; font-size:14px; margin-bottom:24px;">
+                    YouTube Playables Taktik Keskin Nişancı Simülasyonu
+                </p>
+                <div style="display:flex; flex-direction:column; gap:12px; max-width:320px; margin: 0 auto;">
+                    <button id="start-briefing-btn" class="primary-btn">OYUNA BAŞLA</button>
+                    <button id="open-armory-btn" class="secondary-btn">🔫 SİLAH DOLABI & GELİŞTİRME</button>
+                    <button id="open-levels-btn" class="secondary-btn">📋 20 BÖLÜM LİSTESİ</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- GÖREV BRİFİNGİ MODAL -->
+        <div id="briefing-modal" class="screen-modal hidden">
+            <div class="modal-card">
+                <div class="tactical-title" style="color:#38bdf8;">GÖREV EMRİ</div>
+                <div id="briefing-title" class="modal-header">Bölüm 1</div>
+                <div id="briefing-text" class="briefing-text">İstihbarat metni...</div>
+                <div id="briefing-clue" class="clue-badge">🎯 İpucu...</div>
+                <div id="briefing-reward" style="font-weight:700; color:#4ade80; margin-bottom:20px;">ÖDÜL: $200</div>
+                <div>
+                    <button id="launch-mission-btn" class="primary-btn">DÜRBÜNÜ AÇ VE BAŞLA</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ZAFER MODAL -->
+        <div id="victory-modal" class="screen-modal hidden">
+            <div class="modal-card">
+                <div style="font-size: 52px; margin-bottom: 6px;">🎖️</div>
+                <div class="modal-header" style="color:#4ade80;">GÖREV BAŞARILI!</div>
+                <div id="victory-headshot-badge" style="display:none; background:#dc2626; color:#fff; padding:4px 12px; border-radius:20px; font-weight:700; font-size:13px; margin-bottom:12px;">
+                    💥 KUSURSUZ KAFA VURUŞU! (HEADSHOT)
+                </div>
+                <p style="color:#cbd5e1; font-size:15px; margin: 10px 0;">Hedef etkisiz hale getirildi. Bölge güvenli.</p>
+                <div id="victory-reward" class="tactical-value cash-value" style="font-size:28px; margin-bottom:24px;">+$200</div>
+                <div>
+                    <button id="next-mission-btn" class="primary-btn">SONRAKİ BÖLÜM ➡</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BAŞARISIZ MODAL -->
+        <div id="fail-modal" class="screen-modal hidden">
+            <div class="modal-card">
+                <div style="font-size: 52px; margin-bottom: 6px;">❌</div>
+                <div class="modal-header" style="color:#f87171;">GÖREV BAŞARISIZ!</div>
+                <div id="fail-reason" class="briefing-text" style="border-color:#ef4444; color:#fca5a5;">
+                    Hedef kaçtı veya görevi tamamlayamadın.
+                </div>
+                <div style="margin-top:20px;">
+                    <button id="retry-mission-btn" class="primary-btn" style="background:#dc2626;">TEKRAR DENE 🔄</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SİLAH DOLABI & CEPHANE MODAL -->
+        <div id="armory-modal" class="screen-modal hidden">
+            <div class="modal-card" style="max-width:760px; max-height:90vh; overflow-y:auto;">
+                <div class="modal-header">SİLAH DOLABI & GELİŞTİRMELER</div>
+                <p style="color:#94a3b8; font-size:13px; margin-bottom:16px;">
+                    Kazanılan paralarla yeni tüfekler al veya mevcut silahını güçlendir.
+                </p>
+
+                <h3 style="text-align:left; font-size:15px; color:#38bdf8; margin-top:10px;">KESKİN NİŞANCI TÜFEKLERİ</h3>
+                <div id="weapons-catalog" class="weapons-grid"></div>
+
+                <h3 style="text-align:left; font-size:15px; color:#38bdf8; margin-top:20px; margin-bottom:10px;">GENEL MODİFİKASYONLAR</h3>
+                <div id="upgrades-catalog"></div>
+
+                <div style="margin-top:20px;">
+                    <button id="close-armory-btn" class="secondary-btn" style="width:100%;">KAPAT VE DÖN</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 20 BÖLÜM LİSTESİ MODAL -->
+        <div id="levels-modal" class="screen-modal hidden">
+            <div class="modal-card" style="max-width:700px; max-height:85vh; overflow-y:auto;">
+                <div class="modal-header">20 GÖREV LİSTESİ</div>
+                <p style="color:#94a3b8; font-size:13px; margin-bottom:16px;">
+                    Açtığın bölümleri tekrar oynayabilir ve daha fazla para kazanabilirsin.
+                </p>
+                <div id="levels-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;"></div>
+                <div style="margin-top:24px;">
+                    <button id="close-levels-btn" class="secondary-btn" style="width:100%;">GERİ DÖN</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script Yükleme Sırası -->
+    <script src="audio.js"></script>
+    <script src="data.js"></script>
+    <script src="engine.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
