@@ -55,14 +55,14 @@ const MISSIONS_DATA = [
         timeLimit: 35,
         target: {
             x: 480,
-            y: 280,
+            y: 308,
             speed: 0,
             type: 'balcony',
             clothes: { hat: 'none', jacket: '#c53030', pants: '#1a202c', accessory: 'cigar' },
             label: 'Kingpin'
         },
         civilians: [
-            { x: 420, y: 280, speed: 0, clothes: { hat: 'none', jacket: '#cbd5e0', pants: '#4a5568' } } // Waiter
+            { x: 420, y: 308, speed: 0, type: 'balcony', clothes: { hat: 'none', jacket: '#cbd5e0', pants: '#4a5568', accessory: 'cocktail' } } // Waiter
         ]
     },
     {
@@ -94,21 +94,21 @@ const MISSIONS_DATA = [
         id: 5,
         title: "Mission 5: The Window Hacker",
         briefing: "Intel: A rogue hacker is breaching the central bank firewall from a downtown office tower. Locate the lit terminal window.",
-        clue: "Target: 3rd-floor plaza window with blue glow, person wearing glasses at the desk.",
+        clue: "Target: 2nd-floor plaza window with blue terminal glow, hacker with glasses typing on a laptop.",
         reward: 1000,
         distance: 350,
         wind: -1.5,
         timeLimit: 35,
         target: {
-            x: 580,
-            y: 210,
+            x: 505,
+            y: 295,
             speed: 0,
             type: 'window',
             clothes: { hat: 'glasses', jacket: '#3182ce', pants: '#1a202c', accessory: 'laptop' },
             label: 'Hacker'
         },
         civilians: [
-            { x: 320, y: 210, speed: 0, clothes: { hat: 'none', jacket: '#e2e8f0', pants: '#4a5568' } }
+            { x: 440, y: 295, speed: 0, type: 'window', clothes: { hat: 'none', jacket: '#e2e8f0', pants: '#4a5568' } }
         ]
     },
     {
@@ -300,14 +300,14 @@ const MISSIONS_DATA = [
         timeLimit: 25,
         target: {
             x: 450,
-            y: 350,
+            y: 308,
             speed: 0,
-            type: 'dining',
+            type: 'balcony',
             clothes: { hat: 'sunglasses', jacket: '#2b6cb0', pants: '#1a202c', accessory: 'wine' },
             label: 'Financier'
         },
         civilians: [
-            { x: 500, y: 350, speed: 0, clothes: { hat: 'none', jacket: '#e2e8f0', pants: '#4a5568' } }
+            { x: 520, y: 308, speed: 0, type: 'balcony', clothes: { hat: 'none', jacket: '#e2e8f0', pants: '#4a5568', accessory: 'cocktail' } }
         ]
     },
     {

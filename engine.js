@@ -329,6 +329,13 @@ class SniperEngine {
             if (isHeadshot || isBodyHit) {
                 hitSomething = true;
 
+                // Pencere arkasındaysa cam kırılma efekti ve sesi
+                if (ent.type === 'window' || ent.behindGlass) {
+                    ent.glassBroken = true;
+                    window.soundSystem.playGlassShatter();
+                    this.addGlassShards(ent.x, ent.y - (isHeadshot ? 45 : 15));
+                }
+
                 if (ent.isTarget) {
                     // SİNEMATİK AĞIR ÇEKİM MERMİ KAMERASI (BULLET-CAM)
                     this.state = 'BULLET_CAM';
@@ -446,6 +453,26 @@ class SniperEngine {
         this.decals.push({ x: x, y: y, size: 4 });
     }
 
+    addGlassShards(x, y) {
+        // Cam kırılma parçacık patlaması (40 adet dönerken düşen kristal cam kırığı)
+        for (let i = 0; i < 40; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 2 + Math.random() * 8;
+            this.particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 2.5,
+                color: Math.random() > 0.4 ? 'rgba(224, 242, 254, 0.95)' : 'rgba(186, 230, 253, 0.8)',
+                size: 2 + Math.random() * 4,
+                rot: Math.random() * Math.PI * 2,
+                vRot: (Math.random() - 0.5) * 15,
+                life: 1.2,
+                isGlass: true
+            });
+        }
+    }
+
     // Ana Döngü (Update & Render)
     setupLoop() {
         const loop = (now) => {
@@ -508,6 +535,11 @@ class SniperEngine {
             // Mermi hedefe çarptı!
             if (bc.progress >= 1.0) {
                 bc.targetEnt.isAlive = false;
+                if (bc.targetEnt.type === 'window' || bc.targetEnt.behindGlass) {
+                    bc.targetEnt.glassBroken = true;
+                    window.soundSystem.playGlassShatter();
+                    this.addGlassShards(bc.targetX, bc.targetY);
+                }
                 this.addBloodSplatter(bc.targetX, bc.targetY);
                 window.soundSystem.playHitSound(bc.isHeadshot);
                 this.screenShake = 18; // Şiddetli vuruş etkisi
@@ -583,8 +615,9 @@ class SniperEngine {
             const p = this.particles[i];
             p.x += p.vx * effectiveDt * 40;
             p.y += p.vy * effectiveDt * 40;
-            p.vy += 0.25; // Yerçekimi
-            p.life -= effectiveDt * 1.5;
+            p.vy += p.isGlass ? 0.35 : 0.25; // Cam daha ağır düşer
+            if (p.isGlass && p.vRot) p.rot = (p.rot || 0) + p.vRot * effectiveDt * 10;
+            p.life -= effectiveDt * (p.isGlass ? 0.9 : 1.5);
             if (p.life <= 0) this.particles.splice(i, 1);
         }
 
@@ -649,13 +682,34 @@ class SniperEngine {
         // 4. Katman: Hedefler, Karakterler, Siviller
         this.targets.forEach(t => this.drawCharacter(ctx, t));
 
-        // Parçacıklar (Kan, Toz, Kıvılcım)
+        // 5. Katman: Mimari Ön Plan Detayları (Balkon Korkulukları, Pencere Cam Yansımaları, Çerçeveler, Pervazlar)
+        this.drawBuildingForegrounds(ctx);
+
+        // Parçacıklar (Kan, Toz, Kıvılcım, Dönen Kristal Cam Kırıkları)
         this.particles.forEach(p => {
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = Math.max(0, p.life);
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
+            if (p.isGlass) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rot || 0);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.beginPath();
+                ctx.moveTo(-p.size, -p.size * 0.7);
+                ctx.lineTo(p.size, -p.size * 0.3);
+                ctx.lineTo(p.size * 0.3, p.size);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.restore();
+            } else {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
         });
         ctx.globalAlpha = 1.0;
 
@@ -748,16 +802,48 @@ class SniperEngine {
         ctx.fillStyle = leftWallColor;
         ctx.fillRect(80, 230, 240, 390);
 
-        // Tuğla Yatay Derz Çizgileri
+        // Tuğla Dokusu ve Derz Çizgileri
         if (!isThermal) {
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.28)';
             ctx.lineWidth = 1;
-            for (let y = 230; y < 620; y += 18) {
+            for (let y = 230; y < 620; y += 16) {
                 ctx.beginPath();
                 ctx.moveTo(80, y);
                 ctx.lineTo(320, y);
                 ctx.stroke();
+
+                // Dikey şaşırtmalı tuğla çizgileri
+                const row = Math.floor((y - 230) / 16);
+                const shift = (row % 2) * 12;
+                for (let x = 80 + shift; x < 320; x += 24) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x, y + 16);
+                    ctx.stroke();
+                }
             }
+
+            // Çatı Taş Silmesi & Parapet (Cornice with brackets)
+            ctx.fillStyle = '#3f3f46';
+            ctx.fillRect(76, 222, 248, 8);
+            ctx.fillStyle = '#18181b';
+            ctx.fillRect(74, 220, 252, 3);
+            for (let bx = 84; bx < 320; bx += 20) {
+                ctx.fillRect(bx, 226, 6, 6);
+            }
+
+            // Dış Duvar AC Kompresörleri (Damlama animasyonlu)
+            [ {x: 95, y: 350}, {x: 275, y: 480} ].forEach(ac => {
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(ac.x, ac.y, 18, 14);
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.arc(ac.x + 9, ac.y + 7, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+                const dropOffset = (time * 0.04 + ac.x) % 25;
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.6)';
+                ctx.fillRect(ac.x + 9, ac.y + 14 + dropOffset, 1.5, 3);
+            });
         }
 
         // Yangın Merdiveni (Fire Escape) - Sol Cephe
@@ -765,11 +851,8 @@ class SniperEngine {
         ctx.lineWidth = 2;
         for (let floor = 0; floor < 4; floor++) {
             const fy = 270 + floor * 70;
-            // Platform
             ctx.strokeRect(60, fy, 40, 6);
-            // Korkuluk
             ctx.strokeRect(60, fy - 16, 40, 16);
-            // Zikzak merdiven
             ctx.beginPath();
             ctx.moveTo(95, fy + 6);
             ctx.lineTo(65, fy + 70);
@@ -777,16 +860,13 @@ class SniperEngine {
         }
 
         // Çatı Su Kulesi (Cedar Wood Water Tower)
-        // Ahşap gövde
         ctx.fillStyle = isThermal ? '#0f172a' : '#451a03';
         ctx.fillRect(110, 150, 60, 60);
-        // Metal Çemberler
         ctx.strokeStyle = '#78350f';
         ctx.lineWidth = 2;
         ctx.strokeRect(110, 162, 60, 2);
         ctx.strokeRect(110, 185, 60, 2);
         ctx.strokeRect(110, 202, 60, 2);
-        // Koni Çatı
         ctx.fillStyle = isThermal ? '#1e293b' : '#57534e';
         ctx.beginPath();
         ctx.moveTo(105, 150);
@@ -794,7 +874,6 @@ class SniperEngine {
         ctx.lineTo(175, 150);
         ctx.closePath();
         ctx.fill();
-        // Çelik Ayaklar
         ctx.strokeStyle = '#1e293b';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -811,7 +890,6 @@ class SniperEngine {
         ctx.beginPath();
         ctx.arc(225, 212, 12, 0, Math.PI * 2);
         ctx.fill();
-        // Dönen fan bıçakları
         const fanAngle = time * 0.015;
         ctx.strokeStyle = '#94a3b8';
         ctx.lineWidth = 2;
@@ -825,15 +903,12 @@ class SniperEngine {
             for (let c = 0; c < 3; c++) {
                 const wx = 120 + c * 60;
                 const wy = 260 + r * 65;
-                // Pencere çerçevesi
                 ctx.fillStyle = '#1c1917';
                 ctx.fillRect(wx - 2, wy - 2, 34, 44);
-                // Cam ışığı
                 const isWarm = (r + c) % 2 === 0;
                 ctx.fillStyle = isThermal ? '#0284c7' : (isWarm ? 'rgba(254, 240, 138, 0.7)' : 'rgba(15, 23, 42, 0.85)');
                 ctx.fillRect(wx, wy, 30, 40);
 
-                // Jaluzi / Perde Silüetleri
                 if (!isThermal && isWarm) {
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
                     for (let j = 0; j < 6; j++) {
@@ -855,7 +930,7 @@ class SniperEngine {
         ctx.fillRect(350, 155, 290, 6);
         for (let x = 360; x <= 630; x += 30) {
             ctx.fillStyle = isThermal ? '#38bdf8' : '#22c55e';
-            ctx.fillRect(x, 153, 4, 2); // Yeşil emniyet ışıkları
+            ctx.fillRect(x, 153, 4, 2);
         }
 
         // Gökdelen Cam Giydirme Cephe (Curtain Wall Panelleri)
@@ -864,7 +939,6 @@ class SniperEngine {
                 const gx = 375 + col * 65;
                 const gy = 185 + row * 65;
 
-                // Cam Refleksiyon Gradyanı (45 derece parlama)
                 const glassGrad = ctx.createLinearGradient(gx, gy, gx + 45, gy + 45);
                 if (isThermal) {
                     glassGrad.addColorStop(0, '#0369a1');
@@ -886,11 +960,27 @@ class SniperEngine {
                 ctx.fillStyle = glassGrad;
                 ctx.fillRect(gx, gy, 48, 45);
 
-                // Çelik Çerçeve
                 ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
                 ctx.lineWidth = 1.5;
                 ctx.strokeRect(gx, gy, 48, 45);
             }
+        }
+
+        // Canlı Finans & Haber Kayan Yazısı (LED Stock Ticker)
+        if (!isThermal) {
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(350, 360, 290, 16);
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 10px monospace';
+            const tickerText = "NASDAQ ▲ 18,940.25   |   VANGUARD CORP ▲ +3.8%   |   GOLD $2,780/oz   |   CODENAME: EAGLE-1 ACTIVE   |   ";
+            const offset = (time * 0.04) % 450;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(350, 360, 290, 16);
+            ctx.clip();
+            ctx.fillText(tickerText, 352 - offset, 372);
+            ctx.fillText(tickerText, 352 - offset + 450, 372);
+            ctx.restore();
         }
 
         // Neon Otel / Bar Tabelası (Canlı Neon Parıltısı)
@@ -905,14 +995,9 @@ class SniperEngine {
             ctx.restore();
         }
 
-        // VIP Teras Balkonu (Bölüm 3 & 9)
-        ctx.fillStyle = '#334155';
-        ctx.fillRect(390, 310, 210, 8); // Zemin tabla
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.25)'; // Cam balkon korkuluğu
-        ctx.fillRect(390, 275, 210, 35);
-        ctx.strokeStyle = '#94a3b8'; // Krom küpeşte
-        ctx.lineWidth = 2;
-        ctx.strokeRect(390, 275, 210, 35);
+        // VIP Teras Balkonu Taban Tabla Yapısı
+        ctx.fillStyle = isThermal ? '#1e293b' : '#334155';
+        ctx.fillRect(390, 310, 210, 8);
 
         // --- 3. SAĞ BİNA: Telekomünikasyon Kulesi & Helikopter Pisti ---
         ctx.fillStyle = isThermal ? '#08182e' : '#111827';
@@ -966,7 +1051,7 @@ class SniperEngine {
         ctx.fillRect(0, 520, 1100, 180);
 
         // Asfalt Yol Şeritleri
-        ctx.strokeStyle = isThermal ? '#1e293b' : '#eab308'; // Çift sarı şerit
+        ctx.strokeStyle = isThermal ? '#1e293b' : '#eab308';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(0, 565); ctx.lineTo(1100, 565);
@@ -981,13 +1066,11 @@ class SniperEngine {
             ctx.moveTo(510, 520); ctx.lineTo(510, 440);
             ctx.lineTo(525, 435);
             ctx.stroke();
-            // Lamba Başlığı
             ctx.fillStyle = '#fef08a';
             ctx.beginPath();
             ctx.arc(525, 437, 4, 0, Math.PI * 2);
             ctx.fill();
 
-            // Yere Vuran Işık Konisi
             const lightGrad = ctx.createRadialGradient(525, 440, 5, 525, 520, 110);
             lightGrad.addColorStop(0, 'rgba(254, 240, 138, 0.25)');
             lightGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
@@ -999,6 +1082,162 @@ class SniperEngine {
             ctx.closePath();
             ctx.fill();
         }
+    }
+
+    // 5. Katman: Mimari Ön Plan Detayları (Balkon Korkulukları, Cam Yansımaları, Çerçeveler, Pervazlar)
+    drawBuildingForegrounds(ctx) {
+        const isThermal = this.isThermal;
+
+        // 1. VIP TERAS BALKONU ÖN PLANI (Balkondaki karakterlerin bacaklarının önüne gelir)
+        ctx.fillStyle = isThermal ? '#0f172a' : '#1e293b';
+        ctx.fillRect(388, 308, 214, 5);
+
+        // Buzlu & füme güvenlik cam panelleri
+        const glassRailingGrad = ctx.createLinearGradient(390, 275, 390, 310);
+        glassRailingGrad.addColorStop(0, isThermal ? 'rgba(56, 189, 248, 0.25)' : 'rgba(56, 189, 248, 0.35)');
+        glassRailingGrad.addColorStop(1, isThermal ? 'rgba(15, 23, 42, 0.4)' : 'rgba(15, 23, 42, 0.6)');
+        ctx.fillStyle = glassRailingGrad;
+        ctx.fillRect(390, 275, 210, 33);
+
+        // Paslanmaz çelik dikey dikmeler ve üst küpeşte korkuluk
+        ctx.strokeStyle = isThermal ? '#38bdf8' : '#cbd5e1';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(388, 275); ctx.lineTo(602, 275);
+        ctx.stroke();
+
+        // Cam panel bölme dikmeleri
+        for (let bx = 390; bx <= 600; bx += 35) {
+            ctx.beginPath();
+            ctx.moveTo(bx, 275);
+            ctx.lineTo(bx, 308);
+            ctx.stroke();
+        }
+
+        // Balkon Mobilyası: Bistro kokteyl masası (x: 440)
+        ctx.fillStyle = isThermal ? '#1e293b' : '#334155';
+        ctx.fillRect(432, 282, 16, 2);
+        ctx.fillRect(439, 284, 2, 24);
+        ctx.fillRect(434, 306, 12, 2);
+        if (!isThermal) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(442, 276, 3, 5);
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(442, 278, 3, 3);
+        }
+
+        // Saksı Bitkileri (Yeşil topiary / teras peyzajı)
+        [393, 585].forEach(px => {
+            ctx.fillStyle = isThermal ? '#064e3b' : '#14532d';
+            ctx.beginPath();
+            ctx.arc(px + 6, 272, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(px + 2, 275, 8, 8);
+        });
+
+        // 2. SOL BİNA FRANSIZ BALKONLARI (Wrought Iron Railings)
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                const wx = 120 + c * 60;
+                const wy = 260 + r * 65;
+                ctx.fillStyle = isThermal ? '#1e293b' : '#475569';
+                ctx.fillRect(wx - 4, wy + 39, 38, 4);
+
+                ctx.strokeStyle = isThermal ? '#0f172a' : '#1c1917';
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(wx - 2, wy + 26, 34, 14);
+                for (let px = wx + 2; px < wx + 32; px += 5) {
+                    ctx.beginPath();
+                    ctx.moveTo(px, wy + 26);
+                    ctx.lineTo(px, wy + 40);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // 3. PENCERE ARKASINDAKİ HEDEFLER İÇİN ÖN CAM, ÇERÇEVE & KIRILMA DETAYLARI
+        this.targets.forEach(t => {
+            if (t.type === 'window' || t.behindGlass) {
+                const pw = 48;
+                const ph = 46;
+                const px = t.x - pw / 2;
+                const py = t.y - ph + 4;
+
+                // İç oda aydınlatması / Hacker mavi ekran ışığı
+                if (!isThermal && !t.glassBroken) {
+                    const specGrad = ctx.createLinearGradient(px, py, px + pw, py + ph);
+                    specGrad.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
+                    specGrad.addColorStop(0.35, 'rgba(56, 189, 248, 0.18)');
+                    specGrad.addColorStop(0.7, 'rgba(255, 255, 255, 0.05)');
+                    specGrad.addColorStop(1, 'rgba(15, 23, 42, 0.35)');
+                    ctx.fillStyle = specGrad;
+                    ctx.fillRect(px, py, pw, ph);
+                }
+
+                // Pencere Çerçevesi ve Orta Haç Bölmeler
+                ctx.strokeStyle = isThermal ? '#1e293b' : '#334155';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(px, py, pw, ph);
+
+                ctx.beginPath();
+                ctx.moveTo(px + pw / 2, py); ctx.lineTo(px + pw / 2, py + ph);
+                ctx.moveTo(px, py + ph / 2); ctx.lineTo(px + pw, py + ph / 2);
+                ctx.stroke();
+
+                // Yan perdeler
+                if (!isThermal) {
+                    ctx.fillStyle = '#1e3a8a';
+                    ctx.fillRect(px, py, 6, ph);
+                    ctx.fillRect(px + pw - 6, py, 6, ph);
+                }
+
+                // Alt Mermer Pervaz
+                ctx.fillStyle = isThermal ? '#0f172a' : '#cbd5e1';
+                ctx.fillRect(px - 3, py + ph, pw + 6, 3);
+
+                // KIRILMIŞ CAM EFEKTİ
+                if (t.glassBroken) {
+                    ctx.save();
+                    const hitPointX = t.x;
+                    const hitPointY = t.y - 28;
+
+                    // Mermi deliği
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                    ctx.beginPath();
+                    ctx.arc(hitPointX, hitPointY, 7, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Işınsal örümcek ağı cam çatlakları
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+                    ctx.lineWidth = 1.2;
+                    for (let a = 0; a < 8; a++) {
+                        const angle = (a / 8) * Math.PI * 2;
+                        const len = 12 + ((a * 7) % 14);
+                        ctx.beginPath();
+                        ctx.moveTo(hitPointX, hitPointY);
+                        ctx.lineTo(hitPointX + Math.cos(angle) * len, hitPointY + Math.sin(angle) * len);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+            } else if (t.type === 'fire_escape') {
+                ctx.strokeStyle = isThermal ? '#38bdf8' : '#64748b';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(t.x - 25, t.y - 20, 50, 20);
+                for (let fx = t.x - 20; fx < t.x + 25; fx += 8) {
+                    ctx.beginPath();
+                    ctx.moveTo(fx, t.y - 20);
+                    ctx.lineTo(fx, t.y);
+                    ctx.stroke();
+                }
+            }
+        });
+
+        // 4. CADDE KALDIRIM VE BORDIR ÖN PLANI
+        ctx.fillStyle = isThermal ? '#081226' : '#1e293b';
+        ctx.fillRect(0, 520, 1100, 6);
     }
 
     // İnsan Anatomisine Sahip Gelişmiş Karakter Çizici (Gölge, Beden, Kollar, Kıyafet, Saç)
@@ -1238,6 +1477,38 @@ class SniperEngine {
             ctx.fillRect(4, -42, 6, 2);
             ctx.fillStyle = '#ef4444'; // Yanan uç
             ctx.fillRect(10, -42, 2, 2);
+            if (!this.isThermal) {
+                const smokeTime = performance.now() * 0.003;
+                ctx.fillStyle = 'rgba(203, 213, 225, 0.4)';
+                ctx.beginPath();
+                ctx.arc(13 + Math.sin(smokeTime) * 3, -46 - (smokeTime % 1) * 8, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (t.clothes.accessory === 'wine' || t.clothes.accessory === 'cocktail') {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(6, -26, 4, 7);
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(6.5, -23, 3, 3.5);
+        } else if (t.clothes.accessory === 'laptop') {
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(4, -22, 14, 2);
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(14, -32, 2, 11);
+            if (!this.isThermal) {
+                const glow = ctx.createRadialGradient(10, -32, 2, 0, -42, 18);
+                glow.addColorStop(0, 'rgba(56, 189, 248, 0.4)');
+                glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(0, -42, 12, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (t.clothes.accessory === 'binoculars') {
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(2, -48, 8, 5);
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(9, -47.5, 1.5, 4);
         } else if (t.clothes.accessory === 'umbrella') {
             ctx.fillStyle = '#eab308'; // Şemsiye kubbesi
             ctx.beginPath();

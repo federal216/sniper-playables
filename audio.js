@@ -108,6 +108,53 @@ class SoundSystem {
         osc.stop(now + 0.25);
     }
 
+    // Gerçekçi Cam Kırılma Sesi (Pencere arkası hedef vurulduğunda)
+    playGlassShatter() {
+        if (this.muted) return;
+        this.init();
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+
+        // 1. Cam çatlama ve kırılma gürültüsü
+        const noise = ctx.createBufferSource();
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.45, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < buffer.length; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.08));
+        }
+        noise.buffer = buffer;
+
+        const highpass = ctx.createBiquadFilter();
+        highpass.type = 'highpass';
+        highpass.frequency.setValueAtTime(3000, now);
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.85, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+        noise.connect(highpass);
+        highpass.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start(now);
+
+        // 2. Çınlayan cam parçacıkları
+        [2100, 2800, 3500, 4400].forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.03);
+            osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + idx * 0.03 + 0.15);
+
+            g.gain.setValueAtTime(0.2, now + idx * 0.03);
+            g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.03 + 0.2);
+
+            osc.connect(g);
+            g.connect(ctx.destination);
+            osc.start(now + idx * 0.03);
+            osc.stop(now + idx * 0.03 + 0.22);
+        });
+    }
+
     // Kurşun Sekme / Iskalama Sesi (Whiz / Ricochet)
     playRicochet() {
         if (this.muted) return;
