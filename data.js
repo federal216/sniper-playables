@@ -803,3 +803,185 @@ const UPGRADES_DATA = [
         effect: 'Missed shots do not alert targets + 25% Cash Bonus'
     }
 ];
+
+// --- PROSEDÜREL SONSUZ OPERASYONLAR ÜRETİCİSİ (INFINITE PROCEDURAL CONTRACTS) ---
+function generateProceduralContract(streak) {
+    // 1. Zorluk Ölçeklemesi (Streak arttıkça mesafe ve rüzgar artar, zaman baskısı yükselir)
+    const distance = Math.min(640, 220 + streak * 25 + Math.floor(Math.random() * 50));
+    const maxWind = Math.min(8.5, 2.2 + streak * 0.45);
+    const wind = Number(((Math.random() * 2 - 1) * maxWind).toFixed(1));
+    const timeLimit = Math.max(14, 25 - Math.floor(streak * 0.5));
+    const reward = 350 + streak * 175;
+
+    // Lokasyon Tipleri (Balkon, Pencere, Çatı, İskele, Cadde)
+    const locationTypes = ['balcony', 'window', 'scaffolding', 'walking', 'standing'];
+    const locType = locationTypes[Math.floor(Math.random() * locationTypes.length)];
+
+    // Cinsiyet & Fiziksel Görünüm
+    const isFemale = Math.random() > 0.45;
+    const skinTones = ['#fde68a', '#f6ad55', '#e29547', '#b45309', '#78350f'];
+    const hairColors = ['#09090b', '#1c1917', '#451a03', '#d4af37', '#fde047', '#94a3b8'];
+    const hairStylesMale = ['slick_back', 'side_part', 'buzz_cut', 'curly', 'pompadour', 'bald'];
+    const hairStylesFemale = ['wavy_long', 'high_bun', 'bob_cut', 'curly'];
+    const facialHairs = ['clean', 'stubble', 'mustache', 'goatee', 'full_beard'];
+    const hatsMale = ['none', 'none', 'cap_red', 'cap_blue', 'cap_black', 'fedora_black', 'sunglasses', 'glasses'];
+    const hatsFemale = ['none', 'none', 'sunglasses', 'glasses'];
+
+    const skin = skinTones[Math.floor(Math.random() * skinTones.length)];
+    const hairCol = hairColors[Math.floor(Math.random() * hairColors.length)];
+    const hairSt = isFemale 
+        ? hairStylesFemale[Math.floor(Math.random() * hairStylesFemale.length)]
+        : hairStylesMale[Math.floor(Math.random() * hairStylesMale.length)];
+    const fHair = isFemale ? 'clean' : facialHairs[Math.floor(Math.random() * facialHairs.length)];
+    const hat = isFemale 
+        ? hatsFemale[Math.floor(Math.random() * hatsFemale.length)]
+        : hatsMale[Math.floor(Math.random() * hatsMale.length)];
+
+    let jacketStyle = 'suit';
+    let jacket = '#1e293b';
+    let pants = '#0f172a';
+    let shoe = '#0f172a';
+    let accessory = 'none';
+
+    if (isFemale) {
+        const fStyles = ['evening_gown', 'cocktail_dress', 'suit'];
+        jacketStyle = fStyles[Math.floor(Math.random() * fStyles.length)];
+        const dressColors = ['#dc2626', '#059669', '#09090b', '#2563eb', '#7c3aed', '#b45309'];
+        jacket = dressColors[Math.floor(Math.random() * dressColors.length)];
+        shoe = jacket;
+        const fAcc = ['champagne', 'clutch', 'cigarette_holder', 'phone', 'none'];
+        accessory = fAcc[Math.floor(Math.random() * fAcc.length)];
+    } else {
+        const mStyles = ['suit', 'tuxedo', 'trench', 'hoodie', 'jacket'];
+        jacketStyle = mStyles[Math.floor(Math.random() * mStyles.length)];
+        const mColors = ['#1e293b', '#0f172a', '#78350f', '#15803d', '#1e40af', '#dc2626', '#ffffff'];
+        jacket = mColors[Math.floor(Math.random() * mColors.length)];
+        const mAcc = ['cigar', 'briefcase', 'phone', 'binoculars', 'none'];
+        accessory = mAcc[Math.floor(Math.random() * mAcc.length)];
+    }
+
+    // Koordinatlar
+    let targetX = 450;
+    let targetY = 500;
+    let speed = 0;
+    let minX = 200;
+    let maxX = 800;
+
+    if (locType === 'balcony') {
+        targetX = Math.random() > 0.5 ? 440 : 490;
+        targetY = 308;
+    } else if (locType === 'window') {
+        targetX = 505;
+        targetY = 295;
+    } else if (locType === 'scaffolding') {
+        targetX = 350 + Math.floor(Math.random() * 100);
+        targetY = 220;
+    } else if (locType === 'walking') {
+        targetX = 320 + Math.floor(Math.random() * 200);
+        targetY = 500;
+        speed = (Math.random() > 0.5 ? 1 : -1) * (0.35 + Math.random() * 0.35);
+    } else {
+        targetX = 250 + Math.floor(Math.random() * 400);
+        targetY = 500;
+    }
+
+    // Hedef İpucu Metni Oluşturma
+    let clueParts = [];
+    if (isFemale) {
+        if (jacketStyle === 'evening_gown') clueParts.push(`red/silk evening gown`);
+        else if (jacketStyle === 'cocktail_dress') clueParts.push(`cocktail dress`);
+        else clueParts.push(`tailored suit`);
+    } else {
+        if (jacketStyle === 'tuxedo') clueParts.push(`tuxedo`);
+        else if (jacketStyle === 'trench') clueParts.push(`trench coat`);
+        else if (jacketStyle === 'hoodie') clueParts.push(`hoodie`);
+        else clueParts.push(`jacket`);
+    }
+    if (hat !== 'none') {
+        if (hat.includes('cap')) clueParts.push(`baseball cap`);
+        else if (hat === 'sunglasses') clueParts.push(`sunglasses`);
+        else if (hat === 'glasses') clueParts.push(`spectacles`);
+        else if (hat === 'fedora_black') clueParts.push(`black fedora`);
+    }
+    if (accessory !== 'none') {
+        if (accessory === 'champagne') clueParts.push(`champagne glass`);
+        else if (accessory === 'cigar') clueParts.push(`smoking cigar`);
+        else if (accessory === 'clutch') clueParts.push(`holding clutch`);
+        else if (accessory === 'briefcase') clueParts.push(`briefcase`);
+        else if (accessory === 'phone') clueParts.push(`phone call`);
+        else if (accessory === 'cigarette_holder') clueParts.push(`cigarette holder`);
+    }
+    if (locType === 'balcony') clueParts.push(`on 2nd-floor balcony`);
+    else if (locType === 'window') clueParts.push(`behind window glass`);
+    else if (locType === 'scaffolding') clueParts.push(`on steel scaffold`);
+
+    const clue = `TARGET: ${isFemale ? 'Female' : 'Male'}, ${clueParts.join(', ')}.`;
+
+    // Siviller (Oyuncunun ipucunu kontrol etmesi için 1-3 sivil)
+    const civilians = [];
+    const civCount = Math.min(3, 1 + Math.floor(Math.random() * 2));
+    for (let c = 0; c < civCount; c++) {
+        const cIsFemale = Math.random() > 0.5;
+        let cX = 230 + Math.floor(Math.random() * 480);
+        if (Math.abs(cX - targetX) < 45) cX += (cX < targetX ? -65 : 65);
+        let cY = locType === 'balcony' ? 308 : (locType === 'window' ? 295 : 500);
+        civilians.push({
+            x: cX,
+            y: cY,
+            speed: (Math.random() - 0.5) * 0.4,
+            type: locType,
+            clothes: {
+                isFemale: cIsFemale,
+                skinTone: skinTones[Math.floor(Math.random() * skinTones.length)],
+                hairColor: hairColors[Math.floor(Math.random() * hairColors.length)],
+                hairStyle: cIsFemale ? 'wavy_long' : 'side_part',
+                eyeColor: '#0284c7',
+                facialHair: 'clean',
+                hat: 'none',
+                jacket: '#475569',
+                jacketStyle: cIsFemale ? 'cocktail_dress' : 'jacket',
+                pants: '#1e293b',
+                shoeColor: '#0f172a',
+                accessory: 'none'
+            }
+        });
+    }
+
+    return {
+        id: 'endless_' + (streak + 1),
+        isEndless: true,
+        streak: streak,
+        title: `Contract #${streak + 1}`,
+        briefing: `Dynamic High-Value Contract #${streak + 1}: Locate and eliminate the designated target before the window expires.`,
+        clue: clue,
+        reward: reward,
+        distance: distance,
+        wind: wind,
+        timeLimit: timeLimit,
+        target: {
+            x: targetX,
+            y: targetY,
+            speed: speed,
+            minX: minX,
+            maxX: maxX,
+            type: locType,
+            clothes: {
+                isFemale: isFemale,
+                skinTone: skin,
+                hairColor: hairCol,
+                hairStyle: hairSt,
+                eyeColor: '#0284c7',
+                facialHair: fHair,
+                hat: hat,
+                jacket: jacket,
+                jacketStyle: jacketStyle,
+                shirt: '#f8fafc',
+                pants: pants,
+                shoeColor: shoe,
+                accessory: accessory
+            },
+            label: 'Contract Target'
+        },
+        civilians: civilians
+    };
+}

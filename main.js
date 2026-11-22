@@ -21,6 +21,16 @@ document.addEventListener('DOMContentLoaded', () => {
         failModal: document.getElementById('fail-modal'),
         armoryModal: document.getElementById('armory-modal'),
         levelsModal: document.getElementById('levels-modal'),
+        endlessModal: document.getElementById('endless-modal'),
+        endlessFailReason: document.getElementById('endless-fail-reason'),
+        endlessFinalStreak: document.getElementById('endless-final-streak'),
+        endlessBestStreak: document.getElementById('endless-best-streak'),
+        endlessTotalCash: document.getElementById('endless-total-cash'),
+
+        // HUD Clue & Streak Banner
+        hudClueBanner: document.getElementById('hud-clue-banner'),
+        hudStreakPill: document.getElementById('hud-streak-pill'),
+        hudClueText: document.getElementById('hud-clue-text'),
 
         // Briefing Elements
         briefingTitle: document.getElementById('briefing-title'),
@@ -35,6 +45,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Buttons
         startBriefingBtn: document.getElementById('start-briefing-btn'),
+        startEndlessBtn: document.getElementById('start-endless-btn'),
+        endlessRetryBtn: document.getElementById('endless-retry-btn'),
+        endlessMenuBtn: document.getElementById('endless-menu-btn'),
         launchMissionBtn: document.getElementById('launch-mission-btn'),
         nextMissionBtn: document.getElementById('next-mission-btn'),
         victoryReplayBtn: document.getElementById('victory-replay-btn'),
@@ -84,9 +97,40 @@ document.addEventListener('DOMContentLoaded', () => {
         onMissionStarted(mission, weapon, isScoped) {
             hideAllModals();
             els.missionNameHud.textContent = mission.title;
+            if (els.hudStreakPill) els.hudStreakPill.style.display = 'none';
+            if (els.hudClueText) els.hudClueText.textContent = `🎯 ${mission.clue}`;
             els.zoomVal.textContent = isScoped ? `${weapon.zoomLevels[weapon.currentZoomIdx || 0]}x` : '1x';
             if (els.scopeToggleText) {
                 els.scopeToggleText.textContent = isScoped ? '👁️ RECON' : '🎯 SCOPE IN';
+            }
+        },
+        onEndlessStarted(contract, weapon, streak, bestStreak) {
+            hideAllModals();
+            els.missionNameHud.textContent = `🔥 CONTRACT #${streak + 1}`;
+            if (els.hudStreakPill) {
+                els.hudStreakPill.style.display = 'inline-block';
+                els.hudStreakPill.textContent = `🔥 STREAK: ${streak}`;
+            }
+            if (els.hudClueText) els.hudClueText.textContent = contract.clue;
+            els.zoomVal.textContent = '1x';
+            if (els.scopeToggleText) els.scopeToggleText.textContent = '🎯 SCOPE IN';
+        },
+        onEndlessContractLoaded(contract, streak, bestStreak) {
+            els.missionNameHud.textContent = `🔥 CONTRACT #${streak + 1}`;
+            if (els.hudStreakPill) {
+                els.hudStreakPill.style.display = 'inline-block';
+                els.hudStreakPill.textContent = `🔥 STREAK: ${streak}`;
+            }
+            if (els.hudClueText) els.hudClueText.textContent = contract.clue;
+        },
+        onEndlessComplete(data) {
+            hideAllModals();
+            if (els.endlessModal) {
+                els.endlessModal.classList.remove('hidden');
+                els.endlessFailReason.textContent = data.reason;
+                els.endlessFinalStreak.textContent = data.streak;
+                els.endlessBestStreak.textContent = data.bestStreak;
+                els.endlessTotalCash.textContent = `+$${data.totalEarned}`;
             }
         },
         onScopeToggled(isScoped, zoom) {
@@ -124,6 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.failModal.classList.add('hidden');
         els.armoryModal.classList.add('hidden');
         els.levelsModal.classList.add('hidden');
+        if (els.endlessModal) els.endlessModal.classList.add('hidden');
     }
 
     function showBriefing(missionIdx) {
@@ -169,8 +214,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (els.hudRetryBtn) {
         els.hudRetryBtn.addEventListener('click', () => {
-            engine.startMission(engine.playerState.currentMissionIdx);
-            uiHooks.showToast("Mission restarted 🔄", "info");
+            if (engine.isEndlessMode) {
+                engine.startEndlessMode();
+            } else {
+                engine.startMission(engine.playerState.currentMissionIdx);
+            }
+            uiHooks.showToast("Operation restarted 🔄", "info");
+        });
+    }
+
+    if (els.startEndlessBtn) {
+        els.startEndlessBtn.addEventListener('click', () => {
+            engine.startEndlessMode();
+        });
+    }
+
+    if (els.endlessRetryBtn) {
+        els.endlessRetryBtn.addEventListener('click', () => {
+            engine.startEndlessMode();
+        });
+    }
+
+    if (els.endlessMenuBtn) {
+        els.endlessMenuBtn.addEventListener('click', () => {
+            hideAllModals();
+            els.menuModal.classList.remove('hidden');
         });
     }
 

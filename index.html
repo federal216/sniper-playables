@@ -55,6 +55,12 @@
                 </div>
             </div>
 
+            <!-- Live Tactical Objective Banner (Clue & Endless Mode Streak) -->
+            <div id="hud-clue-banner" style="position: absolute; top: 72px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(56, 189, 248, 0.5); border-radius: 8px; padding: 6px 16px; font-size: 13px; color: #f8fafc; font-weight: 600; pointer-events: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); max-width: 90%; text-align: center; z-index: 5;">
+                <span id="hud-streak-pill" style="display:none; background: #ea580c; color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 800;">🔥 STREAK: 0</span>
+                <span id="hud-clue-text">🎯 TARGET CLUE</span>
+            </div>
+
             <!-- Bottom Controls & Breath Gauge -->
             <div class="hud-bottom">
                 <div class="tactical-box breath-container">
@@ -112,6 +118,7 @@
                         </p>
                         <div style="display:flex; flex-direction:column; gap:10px;">
                             <button id="start-briefing-btn" class="primary-btn">START MISSION</button>
+                            <button id="start-endless-btn" class="primary-btn" style="background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%); border-color:#f97316;">🔥 ENDLESS CONTRACTS (SONSUZ MOD)</button>
                             <button id="open-armory-btn" class="secondary-btn" style="margin-left:0;">🔫 ARMORY & WEAPON UPGRADES</button>
                             <button id="open-levels-btn" class="secondary-btn" style="margin-left:0;">📋 20 MISSIONS CATALOG</button>
                         </div>
@@ -199,6 +206,35 @@
                 <div id="levels-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;"></div>
                 <div style="margin-top:24px;">
                     <button id="close-levels-btn" class="secondary-btn" style="width:100%;">BACK TO MENU</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENDLESS MODE RESULTS MODAL -->
+        <div id="endless-modal" class="screen-modal hidden">
+            <div class="modal-card" style="max-width: 520px;">
+                <div style="font-size: 50px; margin-bottom: 6px;">🔥</div>
+                <div class="modal-header" style="color:#f97316;">ENDLESS OPERATION ENDED</div>
+                <div id="endless-fail-reason" class="briefing-text" style="border-color:#ea580c; color:#fed7aa; margin-bottom:16px;">
+                    Target escaped or time expired.
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:20px;">
+                    <div class="tactical-box">
+                        <div class="tactical-title">STREAK ACHIEVED</div>
+                        <div id="endless-final-streak" class="tactical-value" style="font-size:24px; color:#f97316;">0</div>
+                    </div>
+                    <div class="tactical-box">
+                        <div class="tactical-title">PERSONAL RECORD 🏆</div>
+                        <div id="endless-best-streak" class="tactical-value" style="font-size:24px; color:#fbbf24;">0</div>
+                    </div>
+                </div>
+                <div class="tactical-box" style="margin-bottom:20px;">
+                    <div class="tactical-title">TOTAL BOUNTY EARNED</div>
+                    <div id="endless-total-cash" class="tactical-value cash-value" style="font-size:26px;">+$0</div>
+                </div>
+                <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                    <button id="endless-retry-btn" class="primary-btn" style="flex:1; min-width:160px; margin:0; background:#ea580c;">RETRY OPERATION 🔄</button>
+                    <button id="endless-menu-btn" class="secondary-btn" style="flex:1; min-width:140px; margin:0;">MAIN MENU</button>
                 </div>
             </div>
         </div>

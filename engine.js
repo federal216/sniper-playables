@@ -62,6 +62,11 @@ class SniperEngine {
         this.missionTimeLeft = 30;
         this.lastFrameTime = performance.now();
 
+        // Sonsuz Operasyon Modu (Endless Mode)
+        this.isEndlessMode = false;
+        this.endlessStreak = 0;
+        this.endlessTotalCash = 0;
+
         this.initRain();
         this.setupLoop();
     }
@@ -72,6 +77,9 @@ class SniperEngine {
             if (saved) {
                 const parsed = JSON.parse(saved);
                 this.playerState = Object.assign(this.playerState, parsed);
+            }
+            if (typeof this.playerState.bestEndlessStreak !== 'number') {
+                this.playerState.bestEndlessStreak = 0;
             }
         } catch (e) {
             console.warn("Save load error:", e);
@@ -90,9 +98,10 @@ class SniperEngine {
         return WEAPONS_DATA.find(w => w.id === this.playerState.currentWeaponId) || WEAPONS_DATA[0];
     }
 
-    // Görev Başlatma
+    // Görev Başlatma (Senaryo Modu)
     startMission(missionIndex) {
         if (missionIndex < 0 || missionIndex >= MISSIONS_DATA.length) return;
+        this.isEndlessMode = false;
         this.playerState.currentMissionIdx = missionIndex;
         this.activeMission = JSON.parse(JSON.stringify(MISSIONS_DATA[missionIndex]));
 
@@ -125,6 +134,55 @@ class SniperEngine {
         this.state = 'PLAYING';
         this.ui.onMissionStarted(this.activeMission, weapon, this.isScoped);
         window.soundSystem.playVoice('start');
+    }
+
+    // Sonsuz Operasyon Modu Başlatma (Endless Contracts Mode)
+    startEndlessMode() {
+        this.isEndlessMode = true;
+        this.endlessStreak = 0;
+        this.endlessTotalCash = 0;
+        this.activeMission = generateProceduralContract(0);
+
+        const weapon = this.getActiveWeapon();
+        this.isScoped = false;
+        this.isThermal = false;
+        this.bulletCam = null;
+        this.shellCasings = [];
+        this.screenShake = 0;
+        this.scopeZoom = 1.0;
+        this.targetZoom = 1.0;
+        this.overviewScanTime = 0;
+
+        this.missionTimeLeft = this.activeMission.timeLimit;
+        this.camera.x = 500;
+        this.camera.y = 350;
+        this.targetCamera.x = 500;
+        this.targetCamera.y = 350;
+        this.particles = [];
+        this.decals = [];
+        this.enemySniperAimTime = 0;
+        this.breathGauge = 1.0;
+        this.isHoldingBreath = false;
+        this.timeScale = 1.0;
+
+        this.initMissionEntities();
+        this.state = 'PLAYING';
+        window.soundSystem.playVoice('start');
+        window.soundSystem.playWindGust();
+        this.ui.onEndlessStarted(this.activeMission, weapon, this.endlessStreak, this.playerState.bestEndlessStreak);
+    }
+
+    // Sıradaki Sonsuz Sözleşmeyi Kesintisiz Yükle
+    loadNextEndlessContract() {
+        this.activeMission = generateProceduralContract(this.endlessStreak);
+        this.bulletCam = null;
+        this.particles = [];
+        this.decals = [];
+        this.enemySniperAimTime = 0;
+        this.initMissionEntities();
+        this.state = 'PLAYING';
+        window.soundSystem.playWindGust();
+        this.ui.onEndlessContractLoaded(this.activeMission, this.endlessStreak, this.playerState.bestEndlessStreak);
     }
 
     // Dürbün Açma / Kapatma (Genel Bakış <-> Hassas Nişan)
@@ -395,14 +453,36 @@ class SniperEngine {
     }
 
     handleMissionSuccess(isHeadshot) {
-        this.state = 'SUCCESS';
-        window.soundSystem.playSuccess();
-
         let earned = this.activeMission.reward;
         if (isHeadshot) earned += 150; // Headshot bonusu
         if (this.playerState.upgrades.suppressor > 0) earned = Math.round(earned * 1.25);
 
         this.playerState.cash += earned;
+
+        // Sonsuz Operasyon Modu Kontrolü
+        if (this.isEndlessMode) {
+            this.state = 'SUCCESS';
+            window.soundSystem.playSuccess();
+            window.soundSystem.playVoice('neutralized');
+            this.endlessStreak++;
+            this.endlessTotalCash += earned;
+            if (this.endlessStreak > (this.playerState.bestEndlessStreak || 0)) {
+                this.playerState.bestEndlessStreak = this.endlessStreak;
+            }
+            this.saveData();
+
+            const bonusTime = 6;
+            this.missionTimeLeft += bonusTime;
+            this.ui.showToast(`🎯 TARGET NEUTRALIZED! +${bonusTime}s BONUS! 🔥 STREAK: ${this.endlessStreak}`, "success");
+
+            setTimeout(() => {
+                this.loadNextEndlessContract();
+            }, 1200);
+            return;
+        }
+
+        this.state = 'SUCCESS';
+        window.soundSystem.playSuccess();
 
         // Sonraki görevin kilidini aç
         if (this.playerState.currentMissionIdx + 1 >= this.playerState.unlockedMissions &&
@@ -417,6 +497,17 @@ class SniperEngine {
     handleMissionFail(reason) {
         this.state = 'FAILED';
         window.soundSystem.playFail();
+
+        if (this.isEndlessMode) {
+            this.ui.onEndlessComplete({
+                streak: this.endlessStreak,
+                bestStreak: this.playerState.bestEndlessStreak || 0,
+                totalEarned: this.endlessTotalCash,
+                reason: reason || "Contract window expired or rules of engagement breached."
+            });
+            return;
+        }
+
         if (!reason.includes("Hostage") && !reason.includes("civilian")) {
             window.soundSystem.playVoice('failed');
         }

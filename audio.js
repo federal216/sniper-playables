@@ -277,6 +277,34 @@ class SoundSystem {
         osc.stop(now + 0.5);
     }
 
+    // Prosedürel Rüzgar Uğultusu ve Değişim Esintisi (Wind Gust Transition)
+    playWindGust() {
+        if (this.muted) return;
+        this.init();
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+        const noise = ctx.createBufferSource();
+        const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.9, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < buffer.length; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.sin(i / (ctx.sampleRate * 0.9) * Math.PI);
+        }
+        noise.buffer = buffer;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(250, now);
+        filter.frequency.linearRampToValueAtTime(750, now + 0.45);
+        filter.frequency.linearRampToValueAtTime(200, now + 0.9);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.35, now + 0.4);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.9);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start(now);
+    }
+
     // Ses Aç / Kapa (Mute / Unmute)
     toggleMute() {
         this.muted = !this.muted;
