@@ -44,6 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
         closeLevelsBtn: document.getElementById('close-levels-btn'),
 
         // Kontrol Butonları
+        scopeToggleBtn: document.getElementById('scope-toggle-btn'),
+        scopeToggleText: document.getElementById('scope-toggle-text'),
         fireBtn: document.getElementById('fire-btn'),
         zoomBtn: document.getElementById('zoom-btn'),
         breathBtn: document.getElementById('breath-btn')
@@ -66,10 +68,19 @@ document.addEventListener('DOMContentLoaded', () => {
         updateHUDZoom(zoom) {
             els.zoomVal.textContent = `${zoom}x`;
         },
-        onMissionStarted(mission, weapon) {
+        onMissionStarted(mission, weapon, isScoped) {
             hideAllModals();
             els.missionNameHud.textContent = mission.title;
-            els.zoomVal.textContent = `${weapon.zoomLevels[weapon.currentZoomIdx || 0]}x`;
+            els.zoomVal.textContent = isScoped ? `${weapon.zoomLevels[weapon.currentZoomIdx || 0]}x` : '1x';
+            if (els.scopeToggleText) {
+                els.scopeToggleText.textContent = isScoped ? '👁️ GENEL BAKIŞ' : '🎯 NİŞAN AL';
+            }
+        },
+        onScopeToggled(isScoped, zoom) {
+            if (els.scopeToggleText) {
+                els.scopeToggleText.textContent = isScoped ? '👁️ GENEL BAKIŞ' : '🎯 NİŞAN AL';
+            }
+            els.zoomVal.textContent = isScoped ? `${zoom}x` : '1x';
         },
         onMissionComplete(mission, earned, isHeadshot) {
             hideAllModals();
@@ -316,6 +327,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     canvas.addEventListener('touchend', () => { isDragging = false; });
 
+    // Dürbün / Genel Bakış Değiştirme Butonu
+    if (els.scopeToggleBtn) {
+        els.scopeToggleBtn.addEventListener('click', () => engine.toggleScope());
+    }
+
     // Ateş Butonu
     els.fireBtn.addEventListener('click', () => engine.pullTrigger());
 
@@ -340,7 +356,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Klavye Kısayolları (Masaüstü için)
     window.addEventListener('keydown', (e) => {
         if (engine.state !== 'PLAYING') return;
-        if (e.code === 'Space') {
+        if (e.code === 'KeyQ' || e.code === 'Tab') {
+            e.preventDefault();
+            engine.toggleScope();
+        } else if (e.code === 'Space') {
             engine.pullTrigger();
         } else if (e.code === 'KeyZ') {
             engine.cycleZoom();
@@ -362,10 +381,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Sağ Tık ile Nefes Tutma
+    // Sağ Tık ile Dürbün / Genel Bakış Modu Değiştirme
     canvas.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        engine.cycleZoom();
+        engine.toggleScope();
     });
 
     // YouTube Playables SDK Entegrasyonu (Varsa otomatik algılar)

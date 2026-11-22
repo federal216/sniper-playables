@@ -34,6 +34,10 @@ class SniperEngine {
         this.swayOffset = { x: 0, y: 0 };
         this.recoilOffset = { x: 0, y: 0 };
 
+        // Dürbün vs Genel Bakış Modu
+        this.isScoped = false; // Başlangıçta geniş Genel Bakış modu
+        this.overviewScanTime = 0;
+
         // Nefes Tutma
         this.isHoldingBreath = false;
         this.breathGauge = 1.0; // 0 to 1
@@ -89,8 +93,11 @@ class SniperEngine {
         this.activeMission = JSON.parse(JSON.stringify(MISSIONS_DATA[missionIndex]));
 
         const weapon = this.getActiveWeapon();
-        this.scopeZoom = weapon.zoomLevels[weapon.currentZoomIdx || 0];
-        this.targetZoom = this.scopeZoom;
+        // Göreve geniş Genel Bakış (Overview) ile başla ki oyuncu şehri tarayıp hedefi rahatça bulsun
+        this.isScoped = false;
+        this.scopeZoom = 1.0;
+        this.targetZoom = 1.0;
+        this.overviewScanTime = 0;
 
         this.missionTimeLeft = this.activeMission.timeLimit;
         this.camera.x = 500;
@@ -108,8 +115,27 @@ class SniperEngine {
         this.initMissionEntities();
 
         this.state = 'PLAYING';
-        this.ui.onMissionStarted(this.activeMission, weapon);
+        this.ui.onMissionStarted(this.activeMission, weapon, this.isScoped);
         window.soundSystem.playVoice('start');
+    }
+
+    // Dürbün Açma / Kapatma (Genel Bakış <-> Hassas Nişan)
+    toggleScope(forceState) {
+        if (this.state !== 'PLAYING') return;
+        this.isScoped = forceState !== undefined ? forceState : !this.isScoped;
+        const weapon = this.getActiveWeapon();
+
+        if (this.isScoped) {
+            this.targetZoom = weapon.zoomLevels[weapon.currentZoomIdx || 0];
+            window.soundSystem.playZoom();
+            this.ui.showToast("🎯 Dürbün Açıldı (Hassas Nişan)", "info");
+        } else {
+            this.targetZoom = 1.0;
+            this.setBreath(false); // Dürbün kapalıyken nefes tutmayı sıfırla
+            window.soundSystem.playZoom();
+            this.ui.showToast("👁️ Genel Bakış (Şehri Tara)", "info");
+        }
+        this.ui.onScopeToggled(this.isScoped, this.targetZoom);
     }
 
     initMissionEntities() {
@@ -171,8 +197,8 @@ class SniperEngine {
     // Fare / Dokunmatik Nişan Hareketi
     aim(dx, dy) {
         if (this.state !== 'PLAYING') return;
-        // Zoom derecesine göre hassasiyeti ayarla
-        const sensitivity = 0.55 / this.scopeZoom;
+        // Genel Bakış modunda kamera hızlı hareket eder; Dürbün modunda hassas kayar
+        const sensitivity = this.isScoped ? (0.45 / this.scopeZoom) : 1.1;
         this.targetCamera.x += dx * sensitivity;
         this.targetCamera.y += dy * sensitivity;
 
@@ -184,6 +210,10 @@ class SniperEngine {
     // Dürbün Zoom Seviyesi Değiştirme
     cycleZoom() {
         if (this.state !== 'PLAYING') return;
+        if (!this.isScoped) {
+            this.toggleScope(true);
+            return;
+        }
         const weapon = this.getActiveWeapon();
         weapon.currentZoomIdx = ((weapon.currentZoomIdx || 0) + 1) % weapon.zoomLevels.length;
         this.targetZoom = weapon.zoomLevels[weapon.currentZoomIdx];
@@ -194,6 +224,9 @@ class SniperEngine {
     // Nefes Tutma
     setBreath(holding) {
         if (this.state !== 'PLAYING') return;
+        if (!this.isScoped && holding) {
+            this.toggleScope(true); // Nefes tutmak isteyince otomatik dürbün açar
+        }
         if (holding && this.breathGauge > 0.2) {
             this.isHoldingBreath = true;
             this.timeScale = 0.35; // Zaman yavaşlar
@@ -208,6 +241,12 @@ class SniperEngine {
     // Tetiği Çekme (Ateş Etme)
     pullTrigger() {
         if (this.state !== 'PLAYING') return;
+
+        // Eğer Genel Bakış modundaysak, ateş etmek yerine önce dürbünü açıp odaklar
+        if (!this.isScoped) {
+            this.toggleScope(true);
+            return;
+        }
 
         const weapon = this.getActiveWeapon();
         const hasSilencer = weapon.silenced || this.playerState.upgrades.suppressor > 0;
@@ -545,9 +584,13 @@ class SniperEngine {
             this.drawRain(ctx);
         }
 
-        // 6. Katman: Keskin Nişancı Dürbünü (Scope Lens & Reticle)
+        // 6. Katman: Keskin Nişancı Dürbünü veya Genel Bakış HUD
         if (this.state === 'PLAYING' || this.state === 'BULLET_CAM') {
-            this.drawScopeOverlay(ctx);
+            if (this.isScoped || this.state === 'BULLET_CAM') {
+                this.drawScopeOverlay(ctx);
+            } else {
+                this.drawOverviewOverlay(ctx);
+            }
         }
     }
 
@@ -622,15 +665,28 @@ class SniperEngine {
         ctx.fillRect(0, 520, 1100, 180);
     }
 
+    // İnsan Anatomisine Sahip Gelişmiş Karakter Çizici (Gölge, Beden, Kollar, Kıyafet, Saç)
     drawCharacter(ctx, t) {
         if (!t.isAlive) {
-            // Yere serilmiş ceset
+            // Yere serilmiş insan cesedi (Gerçekçi devrilme)
             ctx.save();
             ctx.translate(t.x, t.y);
-            ctx.fillStyle = '#1a202c';
-            ctx.fillRect(-22, -6, 44, 10);
+            // Kan lekesi
+            ctx.fillStyle = 'rgba(153, 27, 27, 0.7)';
             ctx.beginPath();
-            ctx.arc(22, -2, 6, 0, Math.PI * 2);
+            ctx.ellipse(0, 8, 22, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Yatan gövde
+            ctx.fillStyle = t.clothes.jacket || '#2d3748';
+            ctx.fillRect(-18, 0, 36, 10);
+            // Yatan bacaklar
+            ctx.fillStyle = t.clothes.pants || '#1a202c';
+            ctx.fillRect(-28, 2, 14, 7);
+            // Kafa
+            ctx.fillStyle = '#f6ad55';
+            ctx.beginPath();
+            ctx.arc(22, 5, 6, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
             return;
@@ -639,90 +695,297 @@ class SniperEngine {
         ctx.save();
         ctx.translate(t.x, t.y);
 
-        // Yürüme sallantısı
-        const legAngle = Math.sin(t.animFrame) * 0.45;
-
-        // 1. Bacaklar
-        ctx.strokeStyle = t.clothes.pants || '#1a202c';
-        ctx.lineWidth = 4;
+        // 1. Zemin Gölgesi (Ambient Occlusion Shadow)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
         ctx.beginPath();
-        // Sol bacak
-        ctx.moveTo(0, -10);
-        ctx.lineTo(-6 + Math.sin(legAngle) * 8, 12);
-        // Sağ bacak
-        ctx.moveTo(0, -10);
-        ctx.lineTo(6 - Math.sin(legAngle) * 8, 12);
-        ctx.stroke();
+        ctx.ellipse(0, 14, 14, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-        // 2. Gövde / Ceket
+        const legCycle = Math.sin(t.animFrame);
+        const walkOffset = legCycle * 7;
+        const pantsColor = t.clothes.pants || '#1a202c';
+        const shoeColor = '#0f172a';
+        const skinColor = '#f6ad55';
+
+        // 2. Bacaklar ve Ayakkabılar (Kalın, kumaş hatlı insan bacağı)
+        // Sol Bacak
+        ctx.fillStyle = pantsColor;
+        ctx.beginPath();
+        ctx.moveTo(-4, -10);
+        ctx.lineTo(-7 + walkOffset, 10);
+        ctx.lineTo(-2 + walkOffset, 10);
+        ctx.lineTo(-1, -10);
+        ctx.fill();
+        // Sol Ayakkabı
+        ctx.fillStyle = shoeColor;
+        ctx.fillRect(-8 + walkOffset, 10, 8, 4);
+
+        // Sağ Bacak
+        ctx.fillStyle = pantsColor;
+        ctx.beginPath();
+        ctx.moveTo(1, -10);
+        ctx.lineTo(2 - walkOffset, 10);
+        ctx.lineTo(7 - walkOffset, 10);
+        ctx.lineTo(4, -10);
+        ctx.fill();
+        // Sağ Ayakkabı
+        ctx.fillStyle = shoeColor;
+        ctx.fillRect(2 - walkOffset, 10, 8, 4);
+
+        // 3. Arka Kol (Yürüyüş salınımı)
         ctx.fillStyle = t.clothes.jacket || '#2d3748';
-        ctx.fillRect(-7, -35, 14, 26);
+        ctx.beginPath();
+        ctx.ellipse(-9, -24 + walkOffset * 0.4, 4, 10, -walkOffset * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+        // Arka El
+        ctx.fillStyle = skinColor;
+        ctx.beginPath();
+        ctx.arc(-9, -13 + walkOffset * 0.4, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4. İnsan Gövdesi (Geniş omuzlar, bele doğru daralan takım elbise/mont)
+        ctx.fillStyle = t.clothes.jacket || '#2d3748';
+        ctx.beginPath();
+        ctx.moveTo(-9, -36); // Sol omuz
+        ctx.lineTo(9, -36);  // Sağ omuz
+        ctx.lineTo(7, -8);   // Sağ bel
+        ctx.lineTo(-7, -8);  // Sol bel
+        ctx.closePath();
+        ctx.fill();
+
+        // Ceket Yakası & Gömlek V-kesimi
+        ctx.fillStyle = '#f8fafc'; // Beyaz gömlek
+        ctx.beginPath();
+        ctx.moveTo(-3, -36);
+        ctx.lineTo(3, -36);
+        ctx.lineTo(0, -26);
+        ctx.closePath();
+        ctx.fill();
 
         // Kravat
         if (t.clothes.tie) {
             ctx.fillStyle = t.clothes.tie;
-            ctx.fillRect(-2, -32, 4, 16);
+            ctx.beginPath();
+            ctx.moveTo(-1.5, -35);
+            ctx.lineTo(1.5, -35);
+            ctx.lineTo(2, -18);
+            ctx.lineTo(0, -15);
+            ctx.lineTo(-2, -18);
+            ctx.closePath();
+            ctx.fill();
         }
 
-        // 3. Kafa
-        ctx.fillStyle = '#f6ad55'; // Ten rengi
+        // Ceket Düğmeleri / Fermuar çizgisi
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(0, -42, 7, 0, Math.PI * 2);
+        ctx.moveTo(0, -25);
+        ctx.lineTo(0, -8);
+        ctx.stroke();
+
+        // 5. Boyun
+        ctx.fillStyle = skinColor;
+        ctx.fillRect(-2.5, -39, 5, 4);
+
+        // 6. Kafa ve Çene
+        ctx.beginPath();
+        ctx.ellipse(0, -45, 6.5, 7.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 4. Şapka / Maske / Aksesuar
-        if (t.clothes.hat === 'cap_red') {
-            ctx.fillStyle = '#e53e3e';
+        // Saç / Saç Stili (Şapka yoksa)
+        if (!t.clothes.hat || t.clothes.hat === 'none' || t.clothes.hat === 'sunglasses') {
+            ctx.fillStyle = '#1c1917'; // Koyu kahve/siyah saç
             ctx.beginPath();
-            ctx.arc(0, -45, 8, Math.PI, 0);
+            ctx.arc(0, -48, 7, Math.PI, 0);
             ctx.fill();
-            ctx.fillRect(-2, -45, 12, 3); // Siperlik
-        } else if (t.clothes.hat === 'cap_blue') {
-            ctx.fillStyle = '#3182ce';
-            ctx.beginPath();
-            ctx.arc(0, -45, 8, Math.PI, 0);
-            ctx.fill();
-            ctx.fillRect(-2, -45, 12, 3);
-        } else if (t.clothes.hat === 'hardhat_yellow') {
-            ctx.fillStyle = '#ecc94b';
-            ctx.fillRect(-9, -49, 18, 7);
-        } else if (t.clothes.hat === 'ski_mask') {
-            ctx.fillStyle = '#1a202c';
-            ctx.beginPath();
-            ctx.arc(0, -42, 8, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#f6ad55';
-            ctx.fillRect(-4, -43, 8, 3); // Göz boşluğu
+            // Yan favori
+            ctx.fillRect(4, -48, 2.5, 5);
         }
 
-        // Aksesuarlar (Çanta, Şemsiye, Puro)
-        if (t.clothes.accessory === 'briefcase') {
-            ctx.fillStyle = '#1a202c';
-            ctx.fillRect(8, -22, 10, 8);
-        } else if (t.clothes.accessory === 'cigar') {
-            ctx.fillStyle = '#ecc94b';
-            ctx.fillRect(4, -40, 6, 2);
-            ctx.fillStyle = '#e53e3e';
-            ctx.fillRect(10, -40, 2, 2);
-        } else if (t.clothes.accessory === 'umbrella') {
-            ctx.fillStyle = '#ecc94b';
+        // Güneş Gözlüğü
+        if (t.clothes.hat === 'sunglasses' || t.clothes.accessories === 'glasses') {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(-1, -47, 8, 3.5);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(1, -46.5, 2, 1); // Cam parlaması
+        } else {
+            // Normal göz profili
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(2, -46, 2, 1.5);
+        }
+
+        // 7. Şapkalar & Kasklar
+        if (t.clothes.hat === 'cap_red') {
+            ctx.fillStyle = '#dc2626';
             ctx.beginPath();
-            ctx.arc(0, -56, 18, Math.PI, 0);
+            ctx.arc(0, -48, 7.5, Math.PI, 0);
             ctx.fill();
-            ctx.strokeStyle = '#4a5568';
-            ctx.lineWidth = 2;
+            ctx.fillRect(1, -48, 8, 2.5); // Siperlik
+        } else if (t.clothes.hat === 'cap_blue') {
+            ctx.fillStyle = '#2563eb';
             ctx.beginPath();
-            ctx.moveTo(0, -56);
-            ctx.lineTo(0, -30);
+            ctx.arc(0, -48, 7.5, Math.PI, 0);
+            ctx.fill();
+            ctx.fillRect(1, -48, 8, 2.5);
+        } else if (t.clothes.hat === 'cap_black') {
+            ctx.fillStyle = '#1e293b';
+            ctx.beginPath();
+            ctx.arc(0, -48, 7.5, Math.PI, 0);
+            ctx.fill();
+            ctx.fillRect(1, -48, 8, 2.5);
+        } else if (t.clothes.hat === 'hardhat_yellow') {
+            ctx.fillStyle = '#eab308';
+            ctx.beginPath();
+            ctx.arc(0, -49, 8.5, Math.PI, 0);
+            ctx.fill();
+            ctx.fillRect(-7, -49, 15, 3); // Baret siperi
+        } else if (t.clothes.hat === 'ski_mask') {
+            ctx.fillStyle = '#18181b';
+            ctx.beginPath();
+            ctx.ellipse(0, -45, 7, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = skinColor;
+            ctx.fillRect(0, -46, 6, 2.5); // Göz yarığı
+        } else if (t.clothes.hat === 'fedora_black') {
+            ctx.fillStyle = '#09090b';
+            ctx.fillRect(-9, -48, 18, 3); // Geniş kenar
+            ctx.fillRect(-5, -55, 10, 7); // Tepe
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(-5, -49, 10, 1.5); // Kırmızı şerit
+        }
+
+        // 8. Ön Kol & Taşınan Eşyalar
+        ctx.fillStyle = t.clothes.jacket || '#2d3748';
+        ctx.beginPath();
+        ctx.ellipse(7, -24 - walkOffset * 0.4, 4, 10, walkOffset * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = skinColor;
+        ctx.beginPath();
+        ctx.arc(7, -13 - walkOffset * 0.4, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Aksesuarlar (Çanta, Şemsiye, Telefon, Kadeh)
+        if (t.clothes.accessory === 'briefcase') {
+            ctx.fillStyle = '#451a03'; // Deri evrak çantası
+            ctx.fillRect(5, -14 - walkOffset * 0.4, 12, 10);
+            ctx.fillStyle = '#fbbf24'; // Altın kilit
+            ctx.fillRect(10, -11 - walkOffset * 0.4, 2, 2);
+        } else if (t.clothes.accessory === 'phone') {
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(3, -44, 3, 6); // Kulağa götürülen telefon
+        } else if (t.clothes.accessory === 'cigar') {
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(4, -42, 6, 2);
+            ctx.fillStyle = '#ef4444'; // Yanan uç
+            ctx.fillRect(10, -42, 2, 2);
+        } else if (t.clothes.accessory === 'umbrella') {
+            ctx.fillStyle = '#eab308'; // Şemsiye kubbesi
+            ctx.beginPath();
+            ctx.arc(4, -60, 20, Math.PI, 0);
+            ctx.fill();
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(4, -60);
+            ctx.lineTo(4, -30);
             ctx.stroke();
         }
 
         // Panik İfadesi (!)
         if (t.panic) {
-            ctx.fillStyle = '#e53e3e';
-            ctx.font = 'bold 16px sans-serif';
-            ctx.fillText('!', -3, -56);
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.fillText('!', -3, -60);
         }
+
+        // 9. GENEL BAKIŞ MODUNDA HEDEF BELİRTEÇ VURGUSU
+        // Kullanıcı "hedefi zor buldum" dediği için Genel Bakış modundayken hedef üstünde hafif bir taktik işaretçi gösterilir
+        if (!this.isScoped && t.isTarget && this.state === 'PLAYING') {
+            const pulse = (Math.sin(performance.now() * 0.006) + 1) * 0.5;
+            ctx.save();
+            ctx.fillStyle = '#f59e0b';
+            ctx.strokeStyle = '#fef08a';
+            ctx.lineWidth = 1.5;
+
+            // Yanıp sönen ters sarı üçgen ok
+            ctx.beginPath();
+            ctx.moveTo(0, -68 - pulse * 6);
+            ctx.lineTo(-7, -78 - pulse * 6);
+            ctx.lineTo(7, -78 - pulse * 6);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // "HEDEF" Etiketi
+            ctx.font = 'bold 10px monospace';
+            ctx.fillStyle = '#fef08a';
+            ctx.textAlign = 'center';
+            ctx.fillText('ŞÜPHELİ', 0, -82 - pulse * 6);
+            ctx.restore();
+        }
+
+        ctx.restore();
+    }
+
+    // GENEL BAKIŞ MODU ARAYÜZÜ (Geniş Şehir Taraması)
+    drawOverviewOverlay(ctx) {
+        const w = this.width;
+        const h = this.height;
+
+        ctx.save();
+
+        // 1. Dört Köşe Taktik Kamera Çerçevesi [  ]
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+        ctx.lineWidth = 2;
+        const cornerSize = 40;
+        const pad = 30;
+
+        // Sol Üst
+        ctx.beginPath();
+        ctx.moveTo(pad, pad + cornerSize); ctx.lineTo(pad, pad); ctx.lineTo(pad + cornerSize, pad);
+        ctx.stroke();
+        // Sağ Üst
+        ctx.beginPath();
+        ctx.moveTo(w - pad - cornerSize, pad); ctx.lineTo(w - pad, pad); ctx.lineTo(w - pad, pad + cornerSize);
+        ctx.stroke();
+        // Sol Alt
+        ctx.beginPath();
+        ctx.moveTo(pad, h - pad - cornerSize); ctx.lineTo(pad, h - pad); ctx.lineTo(pad + cornerSize, h - pad);
+        ctx.stroke();
+        // Sağ Alt
+        ctx.beginPath();
+        ctx.moveTo(w - pad - cornerSize, h - pad); ctx.lineTo(w - pad, h - pad); ctx.lineTo(w - pad, h - pad - cornerSize);
+        ctx.stroke();
+
+        // 2. Merkez Hafif Nişangah Kutusu (Görüşü engellemez)
+        const cx = w / 2;
+        const cy = h / 2;
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(cx - 24, cy - 24, 48, 48);
+
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+        ctx.beginPath();
+        ctx.moveTo(cx - 8, cy); ctx.lineTo(cx + 8, cy);
+        ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy + 8);
+        ctx.stroke();
+
+        // 3. Üst Bilgi Rozeti
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(cx - 190, 26, 380, 34, 18);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = '#38bdf8';
+        ctx.textAlign = 'center';
+        ctx.fillText('👁️ GENEL BAKIŞ MODU — ŞEHRİ TARA VE HEDEFİ BUL', cx, 42);
+        ctx.font = '10px sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('Nişan almak için [SAĞ TIK] yap veya [NİŞAN AL] butonuna bas', cx, 54);
 
         ctx.restore();
     }
