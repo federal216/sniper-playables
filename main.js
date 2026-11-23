@@ -55,6 +55,9 @@ document.addEventListener('DOMContentLoaded', () => {
         victoryReplayBtn: document.getElementById('victory-replay-btn'),
         retryMissionBtn: document.getElementById('retry-mission-btn'),
         hudRetryBtn: document.getElementById('hud-retry-btn'),
+        victory2xBtn: document.getElementById('victory-2x-reward-btn'),
+        armoryGrantBtn: document.getElementById('armory-grant-ad-btn'),
+        endless2xBtn: document.getElementById('endless-2x-reward-btn'),
         openArmoryBtn: document.getElementById('open-armory-btn'),
         closeArmoryBtn: document.getElementById('close-armory-btn'),
         openLevelsBtn: document.getElementById('open-levels-btn'),
@@ -79,24 +82,133 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hudAv) hudAv.innerHTML = window.SNIPER_HERO_AVATAR_SVG;
     }
 
-    // Playgama Bridge SDK Başlatma & Game Ready Bildirimi (Mandatory for Playgama Sandbox & Moderation)
+    // ===== PLAYGAMA BRIDGE SDK: Full Monetization & Lifecycle System =====
+    const bridgeReady = { initialized: false };
+    let lastInterstitialTime = 0;
+    const INTERSTITIAL_COOLDOWN_MS = 120000; // 2 dakika minimum bekleme (SDK de kontrol eder)
+
     function notifyGameReady() {
         if (window.bridge && window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
             try {
                 window.bridge.platform.sendMessage("game_ready");
-                console.log("Playgama Bridge: game_ready signal sent successfully!");
+                console.log("Playgama Bridge: game_ready signal sent!");
             } catch (e) {
                 console.warn("Playgama Bridge sendMessage error:", e);
             }
         }
     }
 
+    // Interstitial (Geçiş Reklamı) — Doğal duraklamalarda tetiklenir
+    function showInterstitialAd(placement) {
+        if (!window.bridge || !window.bridge.advertisement) return;
+        const now = Date.now();
+        if (now - lastInterstitialTime < INTERSTITIAL_COOLDOWN_MS) {
+            console.log("Playgama: Interstitial cooldown active, skipping.");
+            return;
+        }
+        try {
+            window.bridge.advertisement.showInterstitial(placement || null);
+            lastInterstitialTime = now;
+            console.log("Playgama: Interstitial requested →", placement);
+        } catch (e) {
+            console.warn("Playgama interstitial error:", e);
+        }
+    }
+
+    // Rewarded (Ödüllü Video) — Oyuncu isteğiyle tetiklenir, ödül callback ile verilir
+    function showRewardedAd(placement, onRewarded) {
+        if (!window.bridge || !window.bridge.advertisement) {
+            console.warn("Playgama: Bridge not available for rewarded ad.");
+            if (onRewarded) onRewarded(); // Standalone/test modda ödülü direkt ver
+            return;
+        }
+
+        let rewarded = false;
+        const handler = (state) => {
+            console.log("Playgama: Rewarded state →", state);
+            if (state === 'rewarded') {
+                rewarded = true;
+            }
+            if (state === 'closed') {
+                // Dinleyiciyi kaldır (bir kerelik)
+                window.bridge.advertisement.off('rewarded_state_changed', handler);
+                if (rewarded && onRewarded) {
+                    onRewarded();
+                }
+            }
+            if (state === 'failed') {
+                window.bridge.advertisement.off('rewarded_state_changed', handler);
+                console.warn("Playgama: Rewarded ad failed to load.");
+            }
+        };
+
+        window.bridge.advertisement.on('rewarded_state_changed', handler);
+
+        try {
+            window.bridge.advertisement.showRewarded(placement || null);
+            console.log("Playgama: Rewarded requested →", placement);
+        } catch (e) {
+            console.warn("Playgama rewarded error:", e);
+            window.bridge.advertisement.off('rewarded_state_changed', handler);
+        }
+    }
+
+    // Interstitial state dinleme (ses & duraklatma için)
+    function setupInterstitialStateListener() {
+        if (!window.bridge || !window.bridge.advertisement) return;
+        window.bridge.advertisement.on('interstitial_state_changed', (state) => {
+            console.log("Playgama: Interstitial state →", state);
+            if (state === 'opened') {
+                if (window.soundSystem) window.soundSystem.setMuted(true);
+            }
+            if (state === 'closed' || state === 'failed') {
+                // Kullanıcının kendi mute durumuna dön
+                if (window.soundSystem) window.soundSystem.setMuted(window.soundSystem.userMuted);
+            }
+        });
+    }
+
+    // Platform Lifecycle: Reklam, sekme değiştirme vs. anlarında ses/oyun kontrolü
+    function setupPlatformLifecycle() {
+        if (!window.bridge || !window.bridge.platform) return;
+
+        // Başlangıçta ses durumunu kontrol et
+        if (typeof window.bridge.platform.isAudioEnabled !== 'undefined') {
+            if (!window.bridge.platform.isAudioEnabled && window.soundSystem) {
+                window.soundSystem.setMuted(true);
+            }
+        }
+
+        window.bridge.platform.on('audio_state_changed', (isEnabled) => {
+            console.log("Playgama: Audio state →", isEnabled);
+            if (window.soundSystem) {
+                window.soundSystem.setMuted(!isEnabled);
+            }
+        });
+
+        window.bridge.platform.on('pause_state_changed', (isPaused) => {
+            console.log("Playgama: Pause state →", isPaused);
+            if (window.soundSystem) {
+                if (isPaused) {
+                    window.soundSystem.setMuted(true);
+                    window.soundSystem.stopHeartbeat();
+                } else {
+                    window.soundSystem.setMuted(window.soundSystem.userMuted);
+                }
+            }
+        });
+    }
+
+    // SDK Başlatma
     if (window.bridge && typeof window.bridge.initialize === 'function') {
         window.bridge.initialize().then(() => {
-            console.log("Playgama Bridge SDK başarıyla başlatıldı!");
+            bridgeReady.initialized = true;
+            console.log("Playgama Bridge SDK initialized!");
             notifyGameReady();
+            setupInterstitialStateListener();
+            setupPlatformLifecycle();
         }).catch(err => {
-            console.log("Playgama Bridge bağımsız modda çalışıyor:", err);
+            console.log("Playgama Bridge standalone mode:", err);
             notifyGameReady();
         });
     }
@@ -104,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('load', () => {
         setTimeout(notifyGameReady, 250);
     });
+    // ===== END PLAYGAMA BRIDGE =====
 
     // UI Hooks
     const uiHooks = {
@@ -165,7 +278,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 els.endlessFinalStreak.textContent = data.streak;
                 els.endlessBestStreak.textContent = data.bestStreak;
                 els.endlessTotalCash.textContent = `+$${data.totalEarned}`;
+
+                // Endless 2x ödül butonunu hazırla
+                if (els.endless2xBtn) {
+                    els.endless2xBtn.disabled = false;
+                    els.endless2xBtn.classList.remove('claimed');
+                    els.endless2xBtn.textContent = `🎬 DOUBLE ENDLESS REWARD (+$${data.totalEarned})`;
+                    els.endless2xBtn._earned = data.totalEarned;
+                }
             }
+            // Endless mod bittikten sonra interstitial
+            showInterstitialAd('endless_complete');
         },
         onScopeToggled(isScoped, zoom) {
             if (els.scopeToggleText) {
@@ -184,11 +307,29 @@ document.addEventListener('DOMContentLoaded', () => {
             els.victoryModal.classList.remove('hidden');
             els.victoryReward.textContent = `+$${earned}`;
             els.victoryHeadshotBadge.style.display = isHeadshot ? 'inline-block' : 'none';
+
+            // Zafer ekranında 2x ödül butonunu hazırla (her bölüm sonunda taze)
+            if (els.victory2xBtn) {
+                els.victory2xBtn.disabled = false;
+                els.victory2xBtn.classList.remove('claimed');
+                els.victory2xBtn.textContent = `🎬 CLAIM 2X BOUNTY (+$${earned})`;
+                els.victory2xBtn._earned = earned; // Referans tut
+            }
+
+            // İlk 3 bölüm hariç bölüm sonu interstitial (hook bölgesi)
+            if (engine.playerState.currentMissionIdx >= 3) {
+                showInterstitialAd('mission_complete');
+            }
         },
         onMissionFailed(reason) {
             hideAllModals();
             els.failModal.classList.remove('hidden');
             els.failReason.textContent = reason;
+
+            // Başarısızlık sonrası interstitial (ilk 3 bölüm hariç, çifte reklam koruması SDK'da)
+            if (engine.playerState.currentMissionIdx >= 3) {
+                showInterstitialAd('mission_failed');
+            }
         }
     };
 
@@ -273,6 +414,60 @@ document.addEventListener('DOMContentLoaded', () => {
         els.endlessMenuBtn.addEventListener('click', () => {
             hideAllModals();
             els.menuModal.classList.remove('hidden');
+        });
+    }
+
+    // ===== REWARDED AD BUTTONS (Ödüllü Reklam Tetikleyicileri) =====
+
+    // 1. Victory 2x Reward Button — Bölüm sonu ödülü ikiye katla
+    if (els.victory2xBtn) {
+        els.victory2xBtn.addEventListener('click', () => {
+            const bonusCash = els.victory2xBtn._earned || 0;
+            els.victory2xBtn.disabled = true;
+            els.victory2xBtn.textContent = '⏳ Loading Ad...';
+            showRewardedAd('victory_2x_reward', () => {
+                // Ödül verildi!
+                engine.playerState.cash += bonusCash;
+                engine.saveData();
+                els.victory2xBtn.classList.add('claimed');
+                els.victory2xBtn.textContent = `✅ CLAIMED +$${bonusCash} BONUS!`;
+                els.victoryReward.textContent = `+$${bonusCash * 2}`;
+                uiHooks.showToast(`💰 Double bounty! +$${bonusCash} extra earned!`, 'info');
+            });
+        });
+    }
+
+    // 2. Endless 2x Reward Button — Endless mod ödülünü ikiye katla
+    if (els.endless2xBtn) {
+        els.endless2xBtn.addEventListener('click', () => {
+            const bonusCash = els.endless2xBtn._earned || 0;
+            els.endless2xBtn.disabled = true;
+            els.endless2xBtn.textContent = '⏳ Loading Ad...';
+            showRewardedAd('endless_2x_reward', () => {
+                engine.playerState.cash += bonusCash;
+                engine.saveData();
+                els.endless2xBtn.classList.add('claimed');
+                els.endless2xBtn.textContent = `✅ CLAIMED +$${bonusCash} BONUS!`;
+                els.endlessTotalCash.textContent = `+$${bonusCash * 2}`;
+                uiHooks.showToast(`💰 Double bounty! +$${bonusCash} extra earned!`, 'info');
+            });
+        });
+    }
+
+    // 3. Armory Ad Grant Button — Silah atölyesinde reklam karşılığı +$1000 bonus
+    const armoryGrantBtn = els.armoryGrantBtn;
+    if (armoryGrantBtn) {
+        armoryGrantBtn.addEventListener('click', () => {
+            armoryGrantBtn.disabled = true;
+            armoryGrantBtn.textContent = '⏳ Loading Ad...';
+            showRewardedAd('armory_grant', () => {
+                engine.playerState.cash += 1000;
+                engine.saveData();
+                armoryGrantBtn.classList.add('claimed');
+                armoryGrantBtn.textContent = '✅ +$1,000 TACTICAL AIRDROP COLLECTED!';
+                uiHooks.showToast('💰 Tactical airdrop received! +$1,000!', 'info');
+                renderArmory(); // Silah listesini güncelle (yeni bakiye ile)
+            });
         });
     }
 
@@ -373,6 +568,12 @@ document.addEventListener('DOMContentLoaded', () => {
     els.openArmoryBtn.addEventListener('click', () => {
         hideAllModals();
         renderArmory();
+        // Armory her açıldığında reklam butonunu sıfırla (cooldown yok, her girişte tekrar izlenebilir)
+        if (els.armoryGrantBtn) {
+            els.armoryGrantBtn.disabled = false;
+            els.armoryGrantBtn.classList.remove('claimed');
+            els.armoryGrantBtn.textContent = '🎬 TACTICAL AIRDROP: WATCH AD FOR +$1,000';
+        }
         els.armoryModal.classList.remove('hidden');
     });
 
@@ -537,17 +738,17 @@ document.addEventListener('DOMContentLoaded', () => {
         engine.toggleScope();
     });
 
-    // YouTube Playables SDK Lifecycle Hooks
+    // YouTube Playables SDK Lifecycle Hooks (YouTube'da reklam yok, sadece ses/duraklatma)
     if (window.ytgame) {
         window.ytgame.game.firstFrameReady();
         window.ytgame.game.gameReady();
 
         window.ytgame.system.onPause(() => {
-            if (window.soundSystem) window.soundSystem.muted = true;
+            if (window.soundSystem) window.soundSystem.setMuted(true);
         });
 
         window.ytgame.system.onResume(() => {
-            if (window.soundSystem) window.soundSystem.muted = false;
+            if (window.soundSystem) window.soundSystem.setMuted(window.soundSystem.userMuted);
         });
     }
 });

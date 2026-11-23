@@ -3,6 +3,7 @@ class SoundSystem {
     constructor() {
         this.ctx = null;
         this.muted = false;
+        this.userMuted = false;
         this.heartbeatOsc = null;
         this.heartbeatTimer = null;
     }
@@ -308,10 +309,18 @@ class SoundSystem {
     // Ses Aç / Kapa (Mute / Unmute)
     toggleMute() {
         this.muted = !this.muted;
+        this.userMuted = this.muted;
         if (this.muted) {
             this.stopHeartbeat();
         }
         return this.muted;
+    }
+
+    setMuted(mute) {
+        this.muted = mute;
+        if (this.muted) {
+            this.stopHeartbeat();
+        }
     }
 
     // Taktik Telsiz Seslendirmeleri (Edge-TTS tarafından üretildi)
